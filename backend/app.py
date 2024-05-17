@@ -1,6 +1,7 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from models import *
+import requests
 
 app = Flask(__name__)
 
@@ -18,22 +19,325 @@ def nextID(id):
         return f"{prefix}{chr(ord(alpha)+1)}0001"
     else:
        return f"{prefix}{alpha}{int(num)+1}" 
+    
+
+## Data Retrieval
+@app.route("/get-content/books", methods=["GET"])
+def getBooks():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args!={}:
+        fetcher = Books.query.filter_by(**args).all()
+    else:
+        fetcher = Books.query.offset(start).limit(10000).all()
+
+    if fetcher:
+        books_list = []
+        for book in fetcher:
+            books_list.append({
+                    "book_id":book.book_id,
+                    "book_name":book.book_name,
+                    "img":book.img,
+                    "author_id":book.author_id,
+                    "section_id":book.section_id,
+                    "genre":book.genre,
+                    "date_added":book.date_added,
+            })   
+        return books_list, 200
+    else:
+        abort(404)
+
+@app.route("/get-content/authors", methods=["GET"])
+def getAuthors():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args!={}:
+        fetcher = Authors.query.filter_by(**args).all()
+    else:
+        fetcher = Authors.query.offset(start).limit(10000).all()
+
+    if fetcher:
+        authors_list = []
+        for author in fetcher:
+            authors_list.append({
+                    "author_id":author.author_id,
+                    "author_name":author.author_name,
+                    "img":author.img,
+                    "dob":author.dob,
+                    "dod":author.dod,
+                    "country":author.country,
+                    "avg_rating":author.avg_rating,
+            })   
+        return authors_list, 200
+    else:
+        abort(404)
+
+@app.route("/get-content/users", methods=["GET"])
+def getUsers():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args!={}:
+        fetcher = Users.query.filter_by(**args).all()
+    else:
+        fetcher = Users.query.offset(start).limit(10000).all()
+
+    if fetcher:
+        users_list = []
+        for user in fetcher:
+            users_list.append({
+                    "user_id":user.user_id,
+                    "user_name":user.user_name,
+                    "password":user.password,
+                    "email":user.email,
+                    "ph_no":user.ph_no,
+                    "last_loged":user.last_loged,
+                    "gender":user.gender,
+                    "doj":user.doj,
+                    "dob":user.dob, 
+            })   
+        return users_list, 200
+    else:
+        abort(404)
+
+@app.route("/get-content/sections", methods=["GET"])
+def getSections():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args!={}:
+        fetcher = Sections.query.filter_by(**args).all()
+    else:
+        fetcher = Sections.query.offset(start).limit(10000).all()
+
+    if fetcher:
+        sections_list = []
+        for section in fetcher:
+            sections_list.append({
+                    "section_id":section.section_id,
+                    "section_name":section.section_name,
+                    "date_added":section.date_added,
+            })   
+        return sections_list, 200
+    else:
+        abort(404)
+
+@app.route("/get-content/ratings", methods=["GET"])
+def getRatings():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args!={}:
+        fetcher = Ratings.query.filter_by(**args).all()
+    else:
+        fetcher = Ratings.query.offset(start).limit(10000).all()
+
+    if fetcher:
+        ratings_list = []
+        for rating in fetcher:
+            ratings_list.append({
+                    "sno":rating.sno,
+                    "book_id":rating.book_id,
+                    "user_id":rating.user_id,
+                    "rating":rating.rating,
+                    "feedback":rating.feedback,
+            })   
+        return ratings_list, 200
+    else:
+        abort(404)
+
+@app.route("/get-content/issues", methods=["GET"])
+def getIssues():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args!={}:
+        fetcher = Issues.query.filter_by(**args).all()
+    else:
+        fetcher = Issues.query.offset(start).limit(10000).all()
+
+    if fetcher:
+        issues_list = []
+        for issue in fetcher:
+            issues_list.append({
+                    "sno":issue.sno,
+                    "book_id":issue.book_id,
+                    "user_id":issue.user_id,
+                    "request_date":issue.request_date,
+                    "doi":issue.doi,
+                    "dor":issue.dor,
+            })   
+        return issues_list, 200
+    else:
+        abort(404)
+
 
 ## Data Insertion
-@app.route("/add-content/books", methods=["GET","POST"])
-def addBooks():
+@app.route("/push-content/books", methods=["GET","POST"])
+def pushBooks():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/books?book_name={form['book_name']}"
+    fetcher = requests.get(roger)
     if request.method == "POST":
-        form = request.form
-        last_id = Books.query.order_by(Books.book_id.desc()).first()
-        return last_id
+        if fetcher.status_code==404:
+            last_id = Books.query.order_by(Books.book_id.desc()).first().book_id
+            next_id = nextID(last_id)
+            new_book = Books(
+                book_id=next_id,
+                book_name=form["book_name"],
+                img=form["img"],
+                author_id=form["author_id"],
+                section_id=form["section_id"],
+                genre=form["genre"],
+                date_added=datetime.strptime(form["date_added"],"%Y-%m-%d")
+            )
+            db.session.add(new_book)
+            db.session.commit()
+            return f"New Book added with ID: {next_id}", 200
+        else:
+            return {"message":"Book already exists."}, 406
+    
+@app.route("/push-content/authors", methods=["GET","POST"])
+def pushAuthors():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/authors?author_name={form['author_name']}"
+    fetcher = requests.get(roger)
+    if request.method == "POST":
+        if fetcher.status_code==404:
+            last_id = Authors.query.order_by(Authors.author_id.desc()).first().author_id
+            next_id = nextID(last_id)
+            new_author = Authors(
+                author_id=next_id,
+                author_name=form["author_name"],
+                img=form["img"],
+                dob=datetime.strptime(form["dob"],"%Y-%m-%d"),
+                dod=datetime.strptime(form["dod"],"%Y-%m-%d"),
+                country=form["country"],
+                avg_rating=form["avg_rating"]
+            )
+            db.session.add(new_author)
+            db.session.commit()
+            return f"New Author added with ID: {next_id}", 200
+        else:
+            return {"message":"Author already exists."}, 406
+        
+@app.route("/push-content/users", methods=["GET","POST"])
+def pushUsers():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/users?email={form['email']}"
+    fetcher = requests.get(roger)
+    if request.method == "POST":
+        if fetcher.status_code==404:
+            last_id = Users.query.order_by(Users.user_id.desc()).first().user_id
+            next_id = nextID(last_id)
+            new_user = Users(
+                user_id=next_id,
+                user_name=form["user_name"],
+                password=form["password"],
+                email=form["email"],
+                ph_no=form["ph_no"],
+                last_loged=datetime.strptime(form["last_loged"],"%Y-%m-%d"),
+                gender=form["gender"],
+                doj=datetime.strptime(form["doj"],"%Y-%m-%d"),
+                dob=datetime.strptime(form["dob"],"%Y-%m-%d")
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            return f"New User added with ID: {next_id}", 200
+        else:
+            return {"message":"User already exists."}, 406
+        
+@app.route("/push-content/sections", methods=["GET","POST"])
+def pushSections():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/sections?section_name={form['section_name']}"
+    fetcher = requests.get(roger)
+    if request.method == "POST":
+        if fetcher.status_code==404:
+            last_id = Sections.query.order_by(Sections.section_id.desc()).first().section_id
+            next_id = nextID(last_id)
+            new_section = Sections(
+                section_id=next_id,
+                section_name=form["section_name"],
+                date_added=datetime.strptime(form["date_added"],"%Y-%m-%d")
+            )
+            db.session.add(new_section)
+            db.session.commit()
+            return f"New Section added with ID: {next_id}", 200
+        else:
+            return {"message":"Section already exists."}, 406
+        
+@app.route("/push-content/ratings", methods=["GET","POST"])
+def pushRatings():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
+    fetcher = requests.get(roger)
+    if request.method == "POST":
+        if fetcher.status_code==404:
+            last_id = Ratings.query.order_by(Ratings.sno.desc()).first().sno
+            next_id = last_id+1
+            new_rating = Ratings(
+                sno=next_id,
+                book_id=form["book_id"],
+                user_id=form["user_id"],
+                rating=form["rating"],
+                feedback=form["feedback"]
+            )
+            db.session.add(new_rating)
+            db.session.commit()
+            return f"New Rating added with Sno: {next_id}", 200
+        else:
+            return {"message":"You have already rated this book, you can't do it again."}, 406
+        
+@app.route("/push-content/issues", methods=["GET","POST"])
+def pushIssues():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
+    fetcher = requests.get(roger)
+    if request.method == "POST":
+        if fetcher.status_code==404:
+            last_id = Issues.query.order_by(Issues.sno.desc()).first().sno
+            next_id = last_id+1
+            new_rating = Issues(
+                sno=next_id,
+                book_id=form["book_id"],
+                user_id=form["user_id"],
+                rating=form["rating"],
+                feedback=form["feedback"]
+            )
+            db.session.add(new_rating)
+            db.session.commit()
+            return f"New Issue added with Sno: {next_id}", 200
+        else:
+            return {"message":"You have already rated this book, you can't do it again."}, 406
+    
+
 
 ## Table Truncation
-@app.route('/delete_content',methods=["GET"])
+@app.route('/delete-content/table',methods=["GET"])
 def delete_content():
-    num_rows_deleted = db.session.query(Issues).delete()
+    table = Users
+    num_rows_deleted = db.session.query(table).delete()
     db.session.commit()
-    return f"Deleted {num_rows_deleted} rows from the books table."
+    return f"Deleted {num_rows_deleted} rows from the {table} table."
     
+
+# with app.app_context():
+#     .__table__.create(db.engine)
 
 if __name__ == "__main__":
     app.run(debug=True)
