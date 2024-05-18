@@ -18,7 +18,7 @@ def nextID(id):
     if num=="9999":
         return f"{prefix}{chr(ord(alpha)+1)}0001"
     else:
-       return f"{prefix}{alpha}{int(num)+1}" 
+       return f"{prefix}{alpha}{'0'*(4-len(str(int(num))))}{int(num)+1}" 
     
 
 ## Data Retrieval
@@ -306,32 +306,210 @@ def pushRatings():
 @app.route("/push-content/issues", methods=["GET","POST"])
 def pushIssues():
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
+    roger = f"http://127.0.0.1:5000/get-content/issues?book_id={form['book_id']}&user_id={form['user_id']}"
     fetcher = requests.get(roger)
     if request.method == "POST":
         if fetcher.status_code==404:
             last_id = Issues.query.order_by(Issues.sno.desc()).first().sno
             next_id = last_id+1
-            new_rating = Issues(
+            new_issue = Issues(
                 sno=next_id,
                 book_id=form["book_id"],
                 user_id=form["user_id"],
-                rating=form["rating"],
-                feedback=form["feedback"]
+                request_date=datetime.strptime(form["request_date"],"%Y-%m-%d"),
+                doi=datetime.strptime(form["doi"],"%Y-%m-%d"),
+                dor=datetime.strptime(form["dor"],"%Y-%m-%d")
             )
-            db.session.add(new_rating)
+            db.session.add(new_issue)
             db.session.commit()
             return f"New Issue added with Sno: {next_id}", 200
         else:
             return {"message":"You have already rated this book, you can't do it again."}, 406
     
 
+## Data Updation
+@app.route("/put-content/books", methods=["GET","PUT"])
+def putBooks():
+    form = request.get_json()
+    fetcher = Books.query.filter_by(book_id=form["book_id"]).first()
+    if request.method == "PUT":
+        if fetcher:
+            for i in form:
+                try:
+                    setattr(fetcher, i, datetime.strptime(form[i],"%Y-%m-%d"))
+                except:
+                    setattr(fetcher, i, form[i])
+            db.session.commit()
+            roger = f"http://127.0.0.1:5000/get-content/books?book_id={form['book_id']}"
+            fetcher = requests.get(roger).json()
+            return fetcher, 200
+        else:
+            return {"message":"Book do not exists."}, 406
+
+@app.route("/put-content/authors", methods=["GET","PUT"])
+def putAuthors():
+    form = request.get_json()
+    fetcher = Authors.query.filter_by(author_id=form["author_id"]).first()
+    if request.method == "PUT":
+        if fetcher: 
+            for i in form:
+                try:
+                    setattr(fetcher, i, datetime.strptime(form[i],"%Y-%m-%d"))
+                except:
+                    setattr(fetcher, i, form[i])
+            db.session.commit()
+            roger = f"http://127.0.0.1:5000/get-content/authors?author_id={form['author_id']}"
+            fetcher = requests.get(roger).json()
+            return fetcher, 200
+        else:
+            return {"message":"Author do not exists."}, 406
+
+@app.route("/put-content/users", methods=["GET","PUT"])
+def putUsers():
+    form = request.get_json()
+    fetcher = Users.query.filter_by(user_id=form["user_id"]).first()
+    if request.method == "PUT":
+        if fetcher: 
+            for i in form:
+                try:
+                    setattr(fetcher, i, datetime.strptime(form[i],"%Y-%m-%d"))
+                except:
+                    setattr(fetcher, i, form[i])
+            db.session.commit()
+            roger = f"http://127.0.0.1:5000/get-content/users?user_id={form['user_id']}"
+            fetcher = requests.get(roger).json()
+            return fetcher, 200
+        else:
+            return {"message":"User do not exists."}, 406
+
+@app.route("/put-content/sections", methods=["GET","PUT"])
+def putSections():
+    form = request.get_json()
+    fetcher = Sections.query.filter_by(section_id=form["section_id"]).first()
+    if request.method == "PUT":
+        if fetcher: 
+            for i in form:
+                try:
+                    setattr(fetcher, i, datetime.strptime(form[i],"%Y-%m-%d"))
+                except:
+                    setattr(fetcher, i, form[i])
+            db.session.commit()
+            roger = f"http://127.0.0.1:5000/get-content/sections?section_id={form['section_id']}"
+            fetcher = requests.get(roger).json()
+            return fetcher, 200
+        else:
+            return {"message":"Section do not exists."}, 406
+
+@app.route("/put-content/ratings", methods=["GET","PUT"])
+def putRatings():
+    form = request.get_json()
+    fetcher = Ratings.query.filter_by(book_id=form["book_id"],user_id=form["user_id"]).first()
+    if request.method == "PUT":
+        if fetcher: 
+            for i in form:
+                try:
+                    setattr(fetcher, i, datetime.strptime(form[i],"%Y-%m-%d"))
+                except:
+                    setattr(fetcher, i, form[i])
+            db.session.commit()
+            roger = f"http://127.0.0.1:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
+            fetcher = requests.get(roger).json()
+            return fetcher, 200
+        else:
+            return {"message":"Rating do not exists."}, 406
+
+@app.route("/put-content/issues", methods=["GET","PUT"])
+def putIssues():
+    form = request.get_json()
+    fetcher = Issues.query.filter_by(book_id=form["book_id"],user_id=form["user_id"]).first()
+    if request.method == "PUT":
+        if fetcher: 
+            for i in form:
+                try:
+                    setattr(fetcher, i, datetime.strptime(form[i],"%Y-%m-%d"))
+                except:
+                    setattr(fetcher, i, form[i])
+            db.session.commit()
+            roger = f"http://127.0.0.1:5000/get-content/issues?book_id={form['book_id']}&user_id={form['user_id']}"
+            fetcher = requests.get(roger).json()
+            return fetcher, 200
+        else:
+            return {"message":"Issues do not exists."}, 406
+
+
+## Data Deletion
+@app.route("/delete-content/books", methods=["GET","DELETE"])
+def deleteBooks():
+    args = request.args.to_dict()
+    fetcher = Books.query.filter_by(book_id=args["book_id"]).first()
+    if fetcher:
+        db.session.delete(fetcher)
+        db.session.commit()
+        return {"message":f"Book with ID {args['book_id']} deleted"}, 200
+    else:
+        return {"message":"Book do not exist"}, 406
+
+@app.route("/delete-content/authors", methods=["GET","DELETE"])
+def deleteAuthors():
+    args = request.args.to_dict()
+    fetcher = Authors.query.filter_by(author_id=args["author_id"]).first()
+    if fetcher:
+        db.session.delete(fetcher)
+        db.session.commit()
+        return {"message":f"Author with ID {args['author_id']} deleted"}, 200
+    else:
+        return {"message":"Author do not exist"}, 406
+
+@app.route("/delete-content/users", methods=["GET","DELETE"])
+def deleteUsers():
+    args = request.args.to_dict()
+    fetcher = Users.query.filter_by(user_id=args["user_id"]).first()
+    if fetcher:
+        db.session.delete(fetcher)
+        db.session.commit()
+        return {"message":f"User with ID {args['user_id']} deleted"}, 200
+    else:
+        return {"message":"User do not exist"}, 406
+
+@app.route("/delete-content/sections", methods=["GET","DELETE"])
+def deleteSections():
+    args = request.args.to_dict()
+    fetcher = Sections.query.filter_by(section_id=args["section_id"]).first()
+    if fetcher:
+        db.session.delete(fetcher)
+        db.session.commit()
+        return {"message":f"Section with ID {args['section_id']} deleted"}, 200
+    else:
+        return {"message":"Section do not exist"}, 406
+
+@app.route("/delete-content/ratings", methods=["GET","DELETE"])
+def deleteRatings():
+    args = request.args.to_dict()
+    fetcher = Ratings.query.filter_by(book_id=args["book_id"],user_id=args["user_id"]).first()
+    if fetcher:
+        db.session.delete(fetcher)
+        db.session.commit()
+        return {"message":f"Rating with book id {args['book_id']} & user id {args['book_id']} deleted"}, 200
+    else:
+        return {"message":"Rating do not exist"}, 406
+
+@app.route("/delete-content/issues", methods=["GET","DELETE"])
+def deleteIssues():
+    args = request.args.to_dict()
+    fetcher = Issues.query.filter_by(book_id=args["book_id"],user_id=args["user_id"]).first()
+    if fetcher:
+        db.session.delete(fetcher)
+        db.session.commit()
+        return {"message":f"Issue with book id {args['book_id']} & user id {args['book_id']} deleted"}, 200
+    else:
+        return {"message":"Issue do not exist"}, 406
+
 
 ## Table Truncation
-@app.route('/delete-content/table',methods=["GET"])
+@app.route('/delete-content/table',methods=["GET", "DELETE"])
 def delete_content():
-    table = Users
-    num_rows_deleted = db.session.query(table).delete()
+    table = request.args.to_dict()["table"]
+    num_rows_deleted = db.session.query(globals()[table]).delete()
     db.session.commit()
     return f"Deleted {num_rows_deleted} rows from the {table} table."
     
