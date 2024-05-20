@@ -33,7 +33,8 @@ def getBooks():
     if args != {}:
         fetcher = Books.query.filter_by(**args).all()
     else:
-        fetcher = Books.query.offset(start).limit(500).all()
+        fetcher = Books.query.order_by(
+            Books.date_added.desc()).offset(start).limit(500).all()
 
     if fetcher:
         books_list = []
@@ -190,6 +191,54 @@ def getIssues():
         return issues_list, 200
     else:
         abort(404)
+
+
+@app.route("/get-content/recent-book", methods=["GET"])
+def getRecentBook():
+    book_id = request.args.to_dict()["book_id"]
+    fetchBook = Books.query.filter_by(book_id=book_id).first()
+    fetchAuthor = Authors.query.filter_by(author_id=fetchBook.author_id).first()
+    fetchSection = Sections.query.filter_by(section_id=fetchBook.section_id).first()
+    fetchRating = Ratings.query.filter_by(book_id=book_id).all()
+    fetchIssue = Issues.query.filter_by(book_id=book_id).all()
+
+    ratings = []
+    sum_rate = 0
+    users_list = []
+    for rating in fetchRating:
+        sum_rate += rating.rating
+        ratings.append({
+            "sno": rating.sno,
+            "book_id": rating.book_id,
+            "user_id": rating.user_id,
+            "rating": rating.rating,
+            "feedback": rating.feedback,
+        })
+        users_list.append(Users.query.filter_by(user_id=rating.user_id).first())        
+
+    book_avg_rating=0
+    if len(ratings)>0:    
+        book_avg_rating = sum_rate/len(ratings)
+    total_issues = len(fetchIssue)
+
+    universalContent = {
+        "book_id": book_id,
+        "book_name": fetchBook.book_name,
+        "img": fetchBook.img,
+        "genre": fetchBook.genre,
+        "book_date_added": fetchBook.date_added,
+        "author_name": fetchAuthor.author_name,
+        "author_img": fetchAuthor.img,
+        "dob": fetchAuthor.dob,
+        "dod": fetchAuthor.dod,
+        "country": fetchAuthor.country,
+        "author_avg_rating": fetchAuthor.avg_rating,
+        "section_name": fetchSection.section_name,
+        "ratings": ratings,
+        "book_avg_rating": book_avg_rating,
+        "total_issues": total_issues,
+    }
+    return universalContent, 200
 
 
 # Data Insertion

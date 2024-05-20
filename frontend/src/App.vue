@@ -13,6 +13,7 @@
   box-sizing: border-box;
   text-decoration: none;
   font-family: "Poppins", sans-serif;
+  overflow: hidden;
 }
 @font-face {
   font-family: "Insomnia";
