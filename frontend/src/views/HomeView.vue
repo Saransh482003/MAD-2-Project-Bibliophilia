@@ -64,32 +64,85 @@
         <p>
           DESCRIPTION:<br />
           <span
-            >Lorem ipsum dolor, sit amet consectetur adipisicing elit. Eius,
-            non? Quo ex, non doloremque molestias adipisci eius vel ab
-            praesentium, omnis sapiente quos aspernatur! Modi nemo officiis
-            omnis ea distinctio non nisi?Lorem ipsum dolor sit, amet consectetur
-            adipisicing elit. Cum placeat excepturi itaque voluptas, illum, nam
-            pariatur aliquam vitae, obcaecati quod hic nostrum? Asperiores
-            necessitatibus natus magnam aut quae, distinctio nulla
-            exercitationem iste eligendi, aliquam libero! Facere quidem labore
-            esse possimus iste facilis ducimus, reprehenderit magnam numquam
-            tempora tenetur eveniet adipisci deserunt, veniam itaque recusandae
-            totam consequuntur dolor assumenda fuga at officiis culpa enim?
-            Totam debitis, qui dolore illo perspiciatis vel quia nulla, rerum
-            tempora incidunt, officia dolores aliquid tenetur eum!</span
+            >Lorem ipsum dolor sit amet consectetur adipisicing elit. Cupiditate
+            repellendus quae similique natus in blanditiis doloribus facere et
+            a? Alias excepturi quasi sapiente, aut ea fuga enim iusto doloribus,
+            recusandae, soluta neque dolores reiciendis? Ex repellat eius
+            deleniti molestiae? Enim pariatur illo impedit totam corrupti
+            repudiandae, aliquid assumenda obcaecati veniam.</span
           >
         </p>
       </div>
       <div class="aboutAuthor">
+        <p class="authorDesc boldTitle">ABOUT THE AUTHOR</p>
         <div class="authorProfile">
-          <img :src="previewBook.author_img" alt="" class="profilePic" />
+          <div class="profilePicContainer">
+            <img :src="previewBook.author_img" alt="" class="profilePic" />
+          </div>
           <div class="profileDetails">
-            <p class="profileDetailsName">{{ previewBook.author_name }}</p>
             <p class="profileDetailsName">
+              {{ previewBook.author_name }}
+            </p>
+            <p class="profileDetailsDate">
               {{ previewBook.dob }} - {{ previewBook.dod }}
             </p>
           </div>
         </div>
+        <p class="authorDesc">
+          {{ previewBook.author_name }} is an acclaimed author from
+          {{ previewBook.country }}. Born on {{ previewBook.dob }}, they have
+          captured the hearts of many readers with their outstanding works in
+          the genre of {{ previewBook.genre }}. Their books have an average
+          rating of {{ previewBook.author_avg_rating }}, reflecting their talent
+          and dedication to literature.
+        </p>
+      </div>
+      <div class="aboutAuthor">
+        <p class="authorDesc boldTitle">FEEDBACKS</p>
+        <div class="feedbacks">
+          <div
+            class="userFeedback"
+            v-for="(user, index) in previewBook.ratings"
+            :key="index"
+          >
+            <div class="userDetails">
+              <div class="userPicContainer">
+                <img
+                  v-if="user.gender == 'Male'"
+                  src="@/assets/images/male profile.png"
+                  :alt="user.user_name"
+                  class="userPic"
+                />
+                <img
+                  v-else
+                  src="@/assets/images/female profile.png"
+                  :alt="user.user_name"
+                  class="userPic"
+                />
+              </div>
+              <div class="userProfileDetails">
+                <p>
+                  {{ user.user_name }}
+                </p>
+                <div class="userRating">
+                  <p style="line-height: 10px; margin-top: 2px">
+                    {{ user.book_avg_rating }}
+                  </p>
+                  <img src="@/assets/images/star.png" alt="Star" class="star" />
+                </div>
+              </div>
+            </div>
+            <p class="authorDesc">
+              Lorem ipsum dolor sit amet consectetur adipisicing elit.
+              Consectetur explicabo voluptatibus, exercitationem architecto
+              corrupti vitae cum. Architecto neque sit voluptas?
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="actionBtns">Request</div>
+        <div class="actionBtns">Save</div>
       </div>
     </div>
   </div>
@@ -114,10 +167,15 @@ export default {
         .get(`http://127.0.0.1:5000/get-content/recent-book?book_id=${book_id}`)
         .then((response) => {
           this.previewBook = response.data;
-          if (Math.floor(this.previewBook.book_avg_rating) == 0) {
-            this.previewBook.book_avg_rating =
-              Math.floor(Math.random() * 5) + 1;
-          }
+          console.log(this.previewBook);
+          this.previewBook.dob = this.formatDateToDDMMYYYY(
+            Date.parse(response.data.dob)
+          );
+          this.previewBook.dod = this.formatDateToDDMMYYYY(
+            Date.parse(response.data.dod)
+          );
+          this.previewBook.author_avg_rating =
+            this.previewBook.author_avg_rating.toFixed(1);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -141,6 +199,27 @@ export default {
         return text;
       }
     },
+    formatDateToDDMMYYYY(timestamp) {
+      const date = new Date(timestamp);
+      const day = String(date.getDate()).padStart(2, "0");
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+      const month = monthNames[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day} ${month} ${year}`;
+    },
   },
 };
 </script>
@@ -157,6 +236,7 @@ export default {
 .sideNav {
   display: flex;
   flex-direction: column;
+  color: white;
   width: 5%;
   height: 100%;
   background-color: black;
@@ -174,11 +254,13 @@ export default {
 }
 .previewPanel {
   display: flex;
-  flex-direction: column;
-  width: 20%;
   flex-wrap: wrap;
-  overflow-y: scroll;
+  justify-content: center;
+  width: 20%;
+  height: 100%;
   padding: 1rem 1.5rem;
+  overflow: hidden;
+  overflow-y: scroll;
   background-color: #fff6e6;
 }
 .card {
@@ -255,7 +337,7 @@ export default {
   display: flex;
   height: 2rem;
   width: 2rem;
-  padding: 0.2rem;
+  padding: 0.4rem;
   border-radius: 30rem;
   margin-bottom: 0.8rem;
   background-color: white;
@@ -263,10 +345,19 @@ export default {
   cursor: pointer;
   box-shadow: 0 0.25rem 1rem #00000026;
   z-index: 2;
+  transition: all 0.2s ease;
+}
+.downloadPDF:hover {
+  background-color: rgb(0, 129, 6);
+  /* padding: 0.35rem; */
+}
+.downloadPDF:hover .pdfIcon {
+  filter: grayscale(100%) brightness(100);
 }
 .pdfIcon {
   width: 100%;
   height: 100%;
+  /* transition: all 0.2s ease; */
 }
 .imgContainer {
   height: 100%;
@@ -280,7 +371,7 @@ export default {
   display: flex;
   height: 1.3rem;
   width: 100%;
-  margin: 0.5rem 0rem;
+  margin: 0.8rem 0rem;
   /* justify-content: center; */
 }
 .star {
@@ -289,6 +380,7 @@ export default {
 .majorDetails {
   height: max-content;
   width: 100%;
+  margin-bottom: 1rem;
 }
 .majorDetails p {
   font-size: 0.7rem;
@@ -304,5 +396,126 @@ export default {
   display: flex;
   flex-direction: column;
   width: 100%;
+}
+.authorProfile {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  height: max-content;
+  width: 100%;
+  margin: 0.5rem 0rem;
+}
+.profilePicContainer {
+  display: flex; /* Use flexbox */
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+  width: 7rem;
+  height: 4.6rem; /* Ensure it takes up the full height of its parent */
+  margin-right: 0.5rem;
+  overflow: hidden;
+  background-color: aqua;
+  border-radius: 30rem;
+  /* box-shadow: 0 0.25rem 1rem #00000026; */
+}
+.profileDetails {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.profilePic {
+  height: 100%;
+  width: auto;
+  object-fit: cover;
+}
+.profileDetailsName {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.profileDetailsDate {
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+.authorDesc {
+  font-size: 0.7rem;
+  color: rgb(61, 61, 61);
+}
+.aboutAuthor {
+  margin-bottom: 1rem;
+}
+.boldTitle {
+  font-weight: 700;
+}
+.feedBacks {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: max-content;
+}
+.userFeedback {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: max-content;
+  margin-top: 0.5rem;
+}
+.userDetails {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: max-content;
+}
+.userPicContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 3rem;
+  height: 3rem;
+  background-color: white;
+  padding: 0.5rem;
+  border-radius: 10rem;
+}
+.userPic {
+  height: 100%;
+  width: auto;
+}
+.userProfileDetails {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 0.5rem;
+}
+.userProfileDetails p {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.userProfileDetails div {
+  display: flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.userProfileDetails img {
+  height: 0.7rem;
+  width: 0.7rem;
+  margin-left: 0.3rem;
+}
+.userRating {
+  display: flex;
+  align-items: center;
+}
+.actions {
+  display: flex;
+  width: 100%;
+  height: 5rem;
+  background-color: green;
+  border: 3px solid green;
+}
+.actionBtns {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: gold;
+  width: 50%;
 }
 </style>

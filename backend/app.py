@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from models import *
+import random
 import requests
 
 app = Flask(__name__)
@@ -201,24 +202,41 @@ def getRecentBook():
     fetchSection = Sections.query.filter_by(section_id=fetchBook.section_id).first()
     fetchRating = Ratings.query.filter_by(book_id=book_id).all()
     fetchIssue = Issues.query.filter_by(book_id=book_id).all()
-
+    print(fetchRating)
     ratings = []
     sum_rate = 0
-    users_list = []
-    for rating in fetchRating:
-        sum_rate += rating.rating
-        ratings.append({
-            "sno": rating.sno,
-            "book_id": rating.book_id,
-            "user_id": rating.user_id,
-            "rating": rating.rating,
-            "feedback": rating.feedback,
-        })
-        users_list.append(Users.query.filter_by(user_id=rating.user_id).first())        
-
     book_avg_rating=0
-    if len(ratings)>0:    
-        book_avg_rating = sum_rate/len(ratings)
+    if fetchRating!=[]:
+        for rating in fetchRating:
+            sum_rate += float(rating.rating)
+            roger = f"http://127.0.0.1:5000/get-content/users?user_id={rating.user_id}"
+            fetcher = requests.get(roger).json()[0]
+            # print(fetcher)
+            ratingReturn = {
+                "sno": rating.sno,
+                "user_id": rating.user_id,
+                "rating": rating.rating,
+                "feedback": rating.feedback,
+            }
+            ratingReturn.update(fetcher)
+            ratings.append(ratingReturn)
+        
+        book_avg_rating = sum_rate/len(fetchRating)
+    else:
+        book_avg_rating = random.randrange(1,5)
+
+        ratings = [
+            {
+                "user_name":"Mateo Novak",
+                "gender":"Male",
+                "book_avg_rating":3.5
+            },
+            {
+                "user_name":"Ava Marino",
+                "gender":"Female",
+                "book_avg_rating":4.5
+            }
+        ]
     total_issues = len(fetchIssue)
 
     universalContent = {
