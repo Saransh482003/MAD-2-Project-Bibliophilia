@@ -54,3 +54,10 @@ class Issues(db.Model):
     doi = db.Column(db.DateTime, nullable=False, default = datetime.strftime(datetime.today(), "%d-%m-%Y"))
     dor = db.Column(db.DateTime, nullable=False, default = datetime.strftime(datetime.today(), "%d-%m-%Y"))
     __table_args__ = (db.UniqueConstraint('book_id', 'user_id', name='user_book_unique'),)
+
+class Requests(db.Model):
+    sno = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    book_id = db.Column(db.String, nullable=False)
+    user_id = db.Column(db.String, nullable=False)
+    request_date = db.Column(db.DateTime, nullable=False, default = datetime.strftime(datetime.today(), "%d-%m-%Y"))
+    __table_args__ = (db.UniqueConstraint('book_id', 'user_id', name='user_book_unique'),)

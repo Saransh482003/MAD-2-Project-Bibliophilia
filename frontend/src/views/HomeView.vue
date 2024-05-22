@@ -23,126 +23,143 @@
       </div>
     </div>
     <div class="previewPanel">
-      <div class="previewImgContainer">
-        <img :src="previewBook.img" alt="" class="imgContainer" />
-        <div class="downloadPDFContainer">
-          <a class="downloadPDF" :href="previewBook.book_id">
+      <div class="previewDetailsContainer">
+        <div class="previewImgContainer">
+          <img :src="previewBook.img" alt="" class="imgContainer" />
+          <div class="downloadPDFContainer">
+            <a class="downloadPDF" :href="previewBook.book_id" target="_blank">
+              <img
+                src="@/assets/images/download icon.png"
+                :alt="previewBook.book_name"
+                class="pdfIcon"
+              />
+            </a>
+          </div>
+        </div>
+        <div class="titleAndRating">
+          <p class="previewTitle">{{ previewBook.book_name }}</p>
+          <div class="ratingStar">
             <img
-              src="@/assets/images/download icon.png"
-              :alt="previewBook.book_name"
-              class="pdfIcon"
+              src="@/assets/images/star.png"
+              alt="Star"
+              class="star"
+              v-for="(star, index) in previewBook.book_avg_rating"
+              :key="index"
             />
-          </a>
-        </div>
-      </div>
-      <div class="titleAndRating">
-        <p class="previewTitle">{{ previewBook.book_name }}</p>
-        <div class="ratingStar">
-          <img
-            src="@/assets/images/star.png"
-            alt="Star"
-            class="star"
-            v-for="(star, index) in previewBook.book_avg_rating"
-            :key="index"
-          />
-          <img
-            src="@/assets/images/hollow star.png"
-            alt="Star"
-            class="star"
-            v-for="(star, index) in 5 - previewBook.book_avg_rating"
-            :key="index"
-          />
-        </div>
-      </div>
-      <div class="majorDetails">
-        <p>
-          AUTHOR: <span>{{ previewBook.author_name }}</span>
-        </p>
-        <p>
-          GENRE: <span>{{ previewBook.genre }}</span>
-        </p>
-        <p>
-          DESCRIPTION:<br />
-          <span
-            >Lorem ipsum dolor sit amet consectetur adipisicing elit. Cupiditate
-            repellendus quae similique natus in blanditiis doloribus facere et
-            a? Alias excepturi quasi sapiente, aut ea fuga enim iusto doloribus,
-            recusandae, soluta neque dolores reiciendis? Ex repellat eius
-            deleniti molestiae? Enim pariatur illo impedit totam corrupti
-            repudiandae, aliquid assumenda obcaecati veniam.</span
-          >
-        </p>
-      </div>
-      <div class="aboutAuthor">
-        <p class="authorDesc boldTitle">ABOUT THE AUTHOR</p>
-        <div class="authorProfile">
-          <div class="profilePicContainer">
-            <img :src="previewBook.author_img" alt="" class="profilePic" />
-          </div>
-          <div class="profileDetails">
-            <p class="profileDetailsName">
-              {{ previewBook.author_name }}
-            </p>
-            <p class="profileDetailsDate">
-              {{ previewBook.dob }} - {{ previewBook.dod }}
-            </p>
+            <img
+              src="@/assets/images/hollow star.png"
+              alt="Star"
+              class="star"
+              v-for="(star, index) in 5 - previewBook.book_avg_rating"
+              :key="index"
+            />
           </div>
         </div>
-        <p class="authorDesc">
-          {{ previewBook.author_name }} is an acclaimed author from
-          {{ previewBook.country }}. Born on {{ previewBook.dob }}, they have
-          captured the hearts of many readers with their outstanding works in
-          the genre of {{ previewBook.genre }}. Their books have an average
-          rating of {{ previewBook.author_avg_rating }}, reflecting their talent
-          and dedication to literature.
-        </p>
-      </div>
-      <div class="aboutAuthor">
-        <p class="authorDesc boldTitle">FEEDBACKS</p>
-        <div class="feedbacks">
-          <div
-            class="userFeedback"
-            v-for="(user, index) in previewBook.ratings"
-            :key="index"
-          >
-            <div class="userDetails">
-              <div class="userPicContainer">
-                <img
-                  v-if="user.gender == 'Male'"
-                  src="@/assets/images/male profile.png"
-                  :alt="user.user_name"
-                  class="userPic"
-                />
-                <img
-                  v-else
-                  src="@/assets/images/female profile.png"
-                  :alt="user.user_name"
-                  class="userPic"
-                />
-              </div>
-              <div class="userProfileDetails">
-                <p>
-                  {{ user.user_name }}
-                </p>
-                <div class="userRating">
-                  <p style="line-height: 10px; margin-top: 2px">
-                    {{ user.book_avg_rating }}
+        <div class="majorDetails">
+          <p>
+            AUTHOR: <span>{{ previewBook.author_name }}</span>
+          </p>
+          <p>
+            GENRE: <span>{{ previewBook.genre }}</span>
+          </p>
+          <p>
+            DESCRIPTION:<br />
+            <span
+              >Lorem ipsum dolor sit amet consectetur adipisicing elit.
+              Cupiditate repellendus quae similique natus in blanditiis
+              doloribus facere et a? Alias excepturi quasi sapiente, aut ea fuga
+              enim iusto doloribus, recusandae, soluta neque dolores reiciendis?
+              Ex repellat eius deleniti molestiae? Enim pariatur illo impedit
+              totam corrupti repudiandae, aliquid assumenda obcaecati
+              veniam.</span
+            >
+          </p>
+        </div>
+        <div class="aboutAuthor">
+          <p class="authorDesc boldTitle">ABOUT THE AUTHOR</p>
+          <div class="authorProfile">
+            <div class="profilePicContainer">
+              <img :src="previewBook.author_img" alt="" class="profilePic" />
+            </div>
+            <div class="profileDetails">
+              <p class="profileDetailsName">
+                {{ previewBook.author_name }}
+              </p>
+              <p class="profileDetailsDate">
+                {{ previewBook.dob }} - {{ previewBook.dod }}
+              </p>
+            </div>
+          </div>
+          <p class="authorDesc">
+            {{ previewBook.author_name }} is an acclaimed author from
+            {{ previewBook.country }}. Born on {{ previewBook.dob }}, they have
+            captured the hearts of many readers with their outstanding works in
+            the genre of {{ previewBook.genre }}. Their books have an average
+            rating of {{ previewBook.author_avg_rating }}, reflecting their
+            talent and dedication to literature.
+          </p>
+        </div>
+        <div class="aboutAuthor">
+          <p class="authorDesc boldTitle">FEEDBACKS</p>
+          <div class="feedbacks">
+            <div
+              class="userFeedback"
+              v-for="(user, index) in previewBook.ratings"
+              :key="index"
+            >
+              <div class="userDetails">
+                <div class="userPicContainer">
+                  <img
+                    v-if="user.gender == 'Male'"
+                    src="@/assets/images/male profile.png"
+                    :alt="user.user_name"
+                    class="userPic"
+                  />
+                  <img
+                    v-else
+                    src="@/assets/images/female profile.png"
+                    :alt="user.user_name"
+                    class="userPic"
+                  />
+                </div>
+                <div class="userProfileDetails">
+                  <p>
+                    {{ user.user_name }}
                   </p>
-                  <img src="@/assets/images/star.png" alt="Star" class="star" />
+                  <div class="userRating">
+                    <p style="line-height: 10px; margin-top: 2px">
+                      {{ user.book_avg_rating }}
+                    </p>
+                    <img
+                      src="@/assets/images/star.png"
+                      alt="Star"
+                      class="star"
+                    />
+                  </div>
                 </div>
               </div>
+              <p class="authorDesc">
+                Lorem ipsum dolor sit amet consectetur adipisicing elit.
+                Consectetur explicabo voluptatibus, exercitationem architecto
+                corrupti vitae cum. Architecto neque sit voluptas?
+              </p>
             </div>
-            <p class="authorDesc">
-              Lorem ipsum dolor sit amet consectetur adipisicing elit.
-              Consectetur explicabo voluptatibus, exercitationem architecto
-              corrupti vitae cum. Architecto neque sit voluptas?
-            </p>
           </div>
         </div>
       </div>
       <div class="actions">
-        <div class="actionBtns">Request</div>
-        <div class="actionBtns">Save</div>
+        <div class="actionBtns" @click="request_book(previewBook.book_id)">
+          <img
+            src="@/assets/images/request_book.png"
+            alt=""
+            class="actionBtnImg"
+          />
+          Request
+        </div>
+        <div class="actionBtns sideBtn" @click="save_book(previewBook.book_id)">
+          <img src="@/assets/images/save.png" alt="" class="actionBtnImg" />
+          Save
+        </div>
       </div>
     </div>
   </div>
@@ -156,6 +173,7 @@ export default {
     return {
       books: [],
       previewBook: {},
+      allowedRequest: true,
     };
   },
   created() {
@@ -167,7 +185,6 @@ export default {
         .get(`http://127.0.0.1:5000/get-content/recent-book?book_id=${book_id}`)
         .then((response) => {
           this.previewBook = response.data;
-          console.log(this.previewBook);
           this.previewBook.dob = this.formatDateToDDMMYYYY(
             Date.parse(response.data.dob)
           );
@@ -179,6 +196,17 @@ export default {
         })
         .catch(() => {
           this.$router.push("/error");
+        });
+
+      axios
+        .get(
+          `http://127.0.0.1:5000/get-content/requests?book_id=${book_id}&user_id=REPA0251`
+        )
+        .then(() => {
+          this.allowedRequest = false;
+        })
+        .catch(() => {
+          this.allowedRequest = true;
         });
     },
     fetchBooks() {
@@ -258,10 +286,22 @@ export default {
   justify-content: center;
   width: 20%;
   height: 100%;
+  /* background-color: #fff6e6; */
+  background: url("https://thumbs.dreamstime.com/b/paper-texture-1847313.jpg");
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.previewDetailsContainer {
+  display: block;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  height: 91%;
   padding: 1rem 1.5rem;
   overflow: hidden;
   overflow-y: scroll;
-  background-color: #fff6e6;
 }
 .card {
   display: flex;
@@ -407,16 +447,15 @@ export default {
   margin: 0.5rem 0rem;
 }
 .profilePicContainer {
-  display: flex; /* Use flexbox */
-  justify-content: center; /* Center horizontally */
-  align-items: center; /* Center vertically */
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 7rem;
-  height: 4.6rem; /* Ensure it takes up the full height of its parent */
+  height: 4.6rem;
   margin-right: 0.5rem;
   overflow: hidden;
   background-color: aqua;
   border-radius: 30rem;
-  /* box-shadow: 0 0.25rem 1rem #00000026; */
 }
 .profileDetails {
   display: flex;
@@ -507,15 +546,25 @@ export default {
 .actions {
   display: flex;
   width: 100%;
-  height: 5rem;
-  background-color: green;
-  border: 3px solid green;
+  height: 9%;
+  background-color: #25352b;
+  border-top: 3px solid #25352b;
 }
 .actionBtns {
   display: flex;
   justify-content: center;
   align-items: center;
-  color: gold;
+  color: #e6ac45;
   width: 50%;
+  cursor: pointer;
+}
+.actionBtnImg {
+  height: 1.5rem;
+  width: auto;
+  margin-right: 0.3rem;
+  /* filter: grayscale(100%) brightness(1000); */
+}
+.sideBtn {
+  background-color: white;
 }
 </style>

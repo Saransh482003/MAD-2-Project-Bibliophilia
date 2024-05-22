@@ -101,11 +101,17 @@ export default {
   margin: 0rem 1rem;
   background-color: white;
   border-radius: 40rem;
+  cursor: pointer;
   box-shadow: 0 0.25rem 1rem #00000026;
+}
+.profile:hover .profilePic {
+  height: 73%;
+  width: 73%;
 }
 .profilePic {
   height: 65%;
   width: 65%;
+  transition: all 0.2s ease;
 }
 .link {
   font-size: 1.2rem;

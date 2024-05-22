@@ -194,24 +194,50 @@ def getIssues():
         abort(404)
 
 
+@app.route("/get-content/requests", methods=["GET"])
+def getRequests():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args != {}:
+        fetcher = Requests.query.filter_by(**args).all()
+    else:
+        fetcher = Requests.query.offset(start).limit(500).all()
+
+    if fetcher:
+        request_list = []
+        for requester in fetcher:
+            request_list.append({
+                "sno": requester.sno,
+                "book_id": requester.book_id,
+                "user_id": requester.user_id,
+                "request_date":requester.request_date,
+            })
+        return request_list, 200
+    else:
+        abort(404)
+
+
 @app.route("/get-content/recent-book", methods=["GET"])
 def getRecentBook():
     book_id = request.args.to_dict()["book_id"]
     fetchBook = Books.query.filter_by(book_id=book_id).first()
-    fetchAuthor = Authors.query.filter_by(author_id=fetchBook.author_id).first()
-    fetchSection = Sections.query.filter_by(section_id=fetchBook.section_id).first()
+    fetchAuthor = Authors.query.filter_by(
+        author_id=fetchBook.author_id).first()
+    fetchSection = Sections.query.filter_by(
+        section_id=fetchBook.section_id).first()
     fetchRating = Ratings.query.filter_by(book_id=book_id).all()
     fetchIssue = Issues.query.filter_by(book_id=book_id).all()
-    print(fetchRating)
     ratings = []
     sum_rate = 0
-    book_avg_rating=0
-    if fetchRating!=[]:
+    book_avg_rating = 0
+    if fetchRating != []:
         for rating in fetchRating:
             sum_rate += float(rating.rating)
             roger = f"http://127.0.0.1:5000/get-content/users?user_id={rating.user_id}"
             fetcher = requests.get(roger).json()[0]
-            # print(fetcher)
             ratingReturn = {
                 "sno": rating.sno,
                 "user_id": rating.user_id,
@@ -220,21 +246,21 @@ def getRecentBook():
             }
             ratingReturn.update(fetcher)
             ratings.append(ratingReturn)
-        
+
         book_avg_rating = sum_rate/len(fetchRating)
     else:
-        book_avg_rating = random.randrange(1,5)
+        book_avg_rating = random.randrange(1, 5)
 
         ratings = [
             {
-                "user_name":"Mateo Novak",
-                "gender":"Male",
-                "book_avg_rating":3.5
+                "user_name": "Mateo Novak",
+                "gender": "Male",
+                "book_avg_rating": 3.5
             },
             {
-                "user_name":"Ava Marino",
-                "gender":"Female",
-                "book_avg_rating":4.5
+                "user_name": "Ava Marino",
+                "gender": "Female",
+                "book_avg_rating": 4.5
             }
         ]
     total_issues = len(fetchIssue)
@@ -408,6 +434,26 @@ def pushIssues():
             return f"New Issue added with Sno: {next_id}", 200
         else:
             return {"message": "You have already rated this book, you can't do it again."}, 406
+
+
+@app.route("/push-content/requests", methods=["GET", "POST"])
+def pushRequests():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/requests?book_id={form['book_id']}&user_id={form['user_id']}"
+    fetcher = requests.get(roger)
+    if request.method == "POST":
+        if fetcher.status_code == 404:
+            new_issue = Requests(
+                book_id=form["book_id"],
+                user_id=form["user_id"],
+                request_date=datetime.strptime(
+                    form["request_date"], "%Y-%m-%d"),
+            )
+            db.session.add(new_issue)
+            db.session.commit()
+            return f"New Requests added Book ID: {form['book_id']} & User ID: {form['user_id']}", 200
+        else:
+            return {"message": "You have already requested this book, you can't do it again."}, 406
 
 
 # Data Updation
@@ -612,7 +658,7 @@ def delete_content():
 
 
 # with app.app_context():
-#     .__table__.create(db.engine)
+#     Requests.__table__.create(db.engine)
 
 if __name__ == "__main__":
     app.run(debug=True)
