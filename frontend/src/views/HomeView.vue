@@ -1,7 +1,41 @@
 <template>
   <div class="middle">
-    <div class="sideNav"></div>
-    <div class="mainPanel">
+    <SideNav @changeView="changeMiddleView" />
+
+    <div class="mainPanel" v-if="changeView == 2">
+      <div class="searchCont">
+        <div class="searchbox">
+          <input
+            type="text"
+            class="search"
+            @change="bookSearcher()"
+            id="searchbox"
+            placeholder="Enter your search keyword"
+          />
+        </div>
+      </div>
+      <div
+        v-for="(book, index) in searchBooks"
+        :key="index"
+        class="card"
+        @click="changePreviewBook(book.book_id)"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mainPanel" v-if="changeView == 3">
       <div
         v-for="(book, index) in books"
         :key="index"
@@ -14,7 +48,7 @@
         <div class="bookContent">
           <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
           <p class="bookAuthor">
-            AUTHOR: <span>{{ book.author_id }}</span>
+            AUTHOR: <span>{{ book.author_name }}</span>
           </p>
           <p class="bookAuthor">
             GENRE: <span>{{ book.genre }}</span>
@@ -22,6 +56,72 @@
         </div>
       </div>
     </div>
+
+    <div class="mainPanel" v-if="changeView == 4">
+      <div v-for="(section, index) in sections" :key="index" class="authorCard">
+        <div class="authorImgContainer">
+          <img :src="section.img" alt="" class="authorImg" />
+        </div>
+        <div class="authorContent">
+          <p class="authorName">{{ section.section_name }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mainPanel" v-if="changeView == 5">
+      <div
+        v-for="(book, index) in latestBooks"
+        :key="index"
+        class="card"
+        @click="changePreviewBook(book.book_id)"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mainPanel" v-if="changeView == 6">
+      <div v-for="(author, index) in authors" :key="index" class="authorCard">
+        <div class="authorImgContainer">
+          <img :src="author.img" alt="" class="authorImg" />
+        </div>
+        <div class="authorContent">
+          <p class="authorName">{{ author.author_name }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="mainPanel" v-if="changeView == 7">
+      <div
+        v-for="(genre, index) in genres"
+        :key="index"
+        class="authorCard genreCard"
+      >
+        <div
+          :class="`authorImgContainer genreContainer ${
+            index % 2 == 0 ? 'evenGenreCard' : ''
+          }`"
+        >
+          <p
+            :class="`authorName ${index % 2 == 0 ? 'evenGenreContainer' : ''}`"
+          >
+            {{ genre }}
+          </p>
+          <!-- <img :src="genre.img" alt="" class="authorImg" /> -->
+        </div>
+      </div>
+    </div>
+
     <div class="previewPanel">
       <div class="previewDetailsContainer">
         <div class="previewImgContainer">
@@ -148,11 +248,19 @@
         </div>
       </div>
       <div class="actions">
-        <div class="actionBtns" @click="request_book(previewBook.book_id)">
+        <div
+          :class="`actionBtns ${
+            allowedRequest.status == 602 ? 'disableBtn' : ''
+          }`"
+          @click="request_book($event, previewBook.book_id)"
+          :title="allowedRequest.message"
+        >
           <img
             src="@/assets/images/request_book.png"
             alt=""
-            class="actionBtnImg"
+            :class="`actionBtnImg ${
+              allowedRequest.status == 602 ? 'disableBtnImg' : ''
+            }`"
           />
           Request
         </div>
@@ -167,19 +275,59 @@
 
 <script>
 import axios from "axios";
+import SideNav from "@/components/SideNav.vue";
 export default {
+  components: { SideNav },
   name: "HomeView",
   data() {
     return {
+      searchBooks: [],
       books: [],
+      sections: [],
+      authors: [],
+      genres: [],
+      latestBooks: [],
       previewBook: {},
-      allowedRequest: true,
+      allowedRequest: {
+        status: 601,
+        message: "Click to Request Book",
+        limit: 0,
+      },
+      user_id: "REPA0302",
+      changeView: 1,
     };
   },
   created() {
     this.fetchBooks();
+    this.changeView = 1;
   },
   methods: {
+    changeMiddleView(view) {
+      this.changeView = view;
+      if (view == 4) {
+        this.fetchSections();
+      } else if (view == 6) {
+        this.fetchAuthors();
+      } else if (view == 5) {
+        this.fetchLatest();
+      } else if (view == 7) {
+        this.fetchGenres();
+      }
+      this.searchBooks = [];
+    },
+    bookSearcher() {
+      let keyword = document.getElementById("searchbox").value;
+      axios
+        .get(`http://127.0.0.1:5000/search-content?keyword=${keyword}`, {
+          params: {
+            keyword: keyword,
+          },
+        })
+        .then((response) => {
+          this.searchBooks = [];
+          this.searchBooks = response.data;
+        });
+    },
     changePreviewBook(book_id) {
       axios
         .get(`http://127.0.0.1:5000/get-content/recent-book?book_id=${book_id}`)
@@ -197,16 +345,31 @@ export default {
         .catch(() => {
           this.$router.push("/error");
         });
-
+      this.requestAllowance("UNIH4233", this.user_id);
+    },
+    requestAllowance(book_id, user_id) {
       axios
         .get(
-          `http://127.0.0.1:5000/get-content/requests?book_id=${book_id}&user_id=REPA0251`
+          `http://127.0.0.1:5000/get-content/requests?book_id=${book_id}&user_id=${user_id}`
         )
         .then(() => {
-          this.allowedRequest = false;
+          this.allowedRequest.status = 602;
+          this.allowedRequest.message = "Book already issued";
         })
         .catch(() => {
-          this.allowedRequest = true;
+          axios
+            .get(`http://127.0.0.1:5000/get-content/requests?user_id=REPA0251`)
+            .then((response) => {
+              if (response.data.length >= 5) {
+                this.allowedRequest.status = 603;
+                this.allowedRequest.message = "Request Limit Exhausted";
+              } else {
+                this.allowedRequest.limit = 5 - response.data.length;
+              }
+            });
+        })
+        .catch(() => {
+          this.$router.push("/error");
         });
     },
     fetchBooks() {
@@ -219,6 +382,69 @@ export default {
         .catch(() => {
           this.$router.push("/error");
         });
+    },
+    fetchSections() {
+      axios
+        .get("http://127.0.0.1:5000/get-content/sections")
+        .then((response) => {
+          this.sections = response.data;
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchLatest() {
+      axios
+        .get("http://127.0.0.1:5000/get-content/latestBooks")
+        .then((response) => {
+          this.latestBooks = response.data;
+          this.changePreviewBook(this.latestBooks[0].book_id);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchAuthors() {
+      axios
+        .get("http://127.0.0.1:5000/get-content/authors")
+        .then((response) => {
+          this.authors = response.data;
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchGenres() {
+      axios
+        .get("http://127.0.0.1:5000/get-content/genres")
+        .then((response) => {
+          this.genres = response.data;
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    request_book(event, book_id) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (this.allowedRequest.status == 601) {
+        const today = new Date();
+        const day = today.getDate().toString().padStart(2, "0");
+        const month = (today.getMonth() + 1).toString().padStart(2, "0");
+        const year = today.getFullYear();
+        axios
+          .get(
+            `http://127.0.0.1:5000/push-content/requests?book_id=${book_id}&user_id=${this.user_id}&request_date=${year}-${month}-${day}`
+          )
+          .then(() => {
+            console.log(
+              `Request successfully made for Book ID ${book_id} User ID ${this.user_id}`
+            );
+          })
+          .catch((error) => {
+            console.error("There was an error making the POST request!", error);
+          });
+      }
     },
     shortenText(text) {
       if (text.length > 35) {
@@ -259,15 +485,18 @@ export default {
   flex-wrap: wrap;
   width: 100%;
   height: 40.1rem;
-  /* background-color: aqua; */
+  background-color: beige;
 }
 .sideNav {
   display: flex;
   flex-direction: column;
+  align-items: center;
   color: white;
   width: 5%;
   height: 100%;
-  background-color: black;
+  padding: 1rem 0rem;
+  z-index: 5;
+  background: linear-gradient(180deg, #25352b, black);
 }
 .mainPanel {
   display: flex;
@@ -279,6 +508,11 @@ export default {
   padding-top: 0.7rem;
   overflow: hidden;
   overflow-y: scroll;
+  z-index: 3;
+  /* background: url("https://img.freepik.com/free-vector/hand-drawn-painted-whitewash-background_23-2151214448.jpg");
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat; */
 }
 .previewPanel {
   display: flex;
@@ -313,6 +547,7 @@ export default {
   border-radius: 0.3rem;
   box-shadow: 0 0.25rem 1rem #00000026;
   transition: all 0.2s ease;
+  background-color: white;
 }
 .card:hover {
   height: 21rem;
@@ -388,15 +623,16 @@ export default {
   transition: all 0.2s ease;
 }
 .downloadPDF:hover {
-  background-color: rgb(0, 129, 6);
+  background-color: #25352b;
   /* padding: 0.35rem; */
 }
 .downloadPDF:hover .pdfIcon {
-  filter: grayscale(100%) brightness(100);
+  filter: none;
 }
 .pdfIcon {
   width: 100%;
   height: 100%;
+  filter: grayscale(100%) brightness(0);
   /* transition: all 0.2s ease; */
 }
 .imgContainer {
@@ -548,7 +784,7 @@ export default {
   width: 100%;
   height: 9%;
   background-color: #25352b;
-  border-top: 3px solid #25352b;
+  /* border-top: 3px solid #25352b; */
 }
 .actionBtns {
   display: flex;
@@ -557,14 +793,114 @@ export default {
   color: #e6ac45;
   width: 50%;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .actionBtnImg {
   height: 1.5rem;
   width: auto;
   margin-right: 0.3rem;
+  transition: all 0.2s ease;
   /* filter: grayscale(100%) brightness(1000); */
 }
 .sideBtn {
   background-color: white;
+}
+.actionBtns:hover {
+  font-size: 1.1rem;
+}
+.actionBtns:hover .actionBtnImg {
+  height: 1.6rem;
+}
+.disableBtn {
+  background-color: rgb(124, 124, 124);
+  color: white;
+}
+.disableBtnImg {
+  filter: grayscale(100%) brightness(1000);
+}
+.authorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 13rem;
+  width: 10rem;
+  margin: 0.7rem 1.4rem;
+}
+.authorImgContainer {
+  display: flex;
+  height: 10rem;
+  width: 10rem;
+  border-radius: 10rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+}
+.authorImg {
+  height: 100%;
+  width: auto;
+  object-fit: cover;
+}
+.authorContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 3rem;
+}
+.authorName {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.authorRating {
+  font-size: 0.7rem;
+}
+.genreContainer {
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 1rem;
+  align-items: center;
+  text-align: center;
+  background-color: #e6ac45;
+}
+.genreCard {
+  margin: 0.5rem 1.2rem;
+  height: max-content;
+  color: #25352b;
+}
+.evenGenreCard {
+  background-color: #25352b;
+}
+.evenGenreContainer {
+  color: #e6ac45;
+}
+.searchCont {
+  display: flex;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  height: 4rem;
+}
+.searchbox {
+  display: flex;
+  align-items: center;
+  width: 40%;
+  background-color: #111914;
+  border-top-right-radius: 10rem;
+  border-bottom-right-radius: 10rem;
+}
+.search {
+  margin: 1rem 1rem;
+  margin-right: 2rem;
+  caret-shape: bar;
+  caret-color: #e6ac45;
+  padding: 0.3rem 0.3rem;
+  color: #e6ac45;
+  font-weight: 700;
+  letter-spacing: 1px;
+  width: 100%;
+  outline: none;
+  border: 0rem;
+  background-color: #111914;
+  border-bottom: 3px solid #e6ac45;
 }
 </style>

@@ -34,8 +34,7 @@ def getBooks():
     if args != {}:
         fetcher = Books.query.filter_by(**args).all()
     else:
-        fetcher = Books.query.order_by(
-            Books.date_added.desc()).offset(start).limit(500).all()
+        fetcher = Books.query.offset(start).limit(500).all()
 
     if fetcher:
         books_list = []
@@ -45,6 +44,29 @@ def getBooks():
                 "book_name": book.book_name,
                 "img": book.img,
                 "author_id": book.author_id,
+                "author_name": book.author_name,
+                "section_id": book.section_id,
+                "genre": book.genre,
+                "date_added": book.date_added,
+            })
+        return books_list, 200
+    else:
+        abort(404)
+
+@app.route("/get-content/latestBooks", methods=["GET"])
+def getLatestBooks():
+    fetcher = Books.query.order_by(
+            Books.date_added.desc()).limit(500).all()
+
+    if fetcher:
+        books_list = []
+        for book in fetcher:
+            books_list.append({
+                "book_id": book.book_id,
+                "book_name": book.book_name,
+                "img": book.img,
+                "author_id": book.author_id,
+                "author_name": book.author_name,
                 "section_id": book.section_id,
                 "genre": book.genre,
                 "date_added": book.date_added,
@@ -64,7 +86,7 @@ def getAuthors():
     if args != {}:
         fetcher = Authors.query.filter_by(**args).all()
     else:
-        fetcher = Authors.query.offset(start).limit(500).all()
+        fetcher = Authors.query.offset(start).limit(100).all()
 
     if fetcher:
         authors_list = []
@@ -132,6 +154,7 @@ def getSections():
             sections_list.append({
                 "section_id": section.section_id,
                 "section_name": section.section_name,
+                "img": section.img,
                 "date_added": section.date_added,
             })
         return sections_list, 200
@@ -213,9 +236,30 @@ def getRequests():
                 "sno": requester.sno,
                 "book_id": requester.book_id,
                 "user_id": requester.user_id,
-                "request_date":requester.request_date,
+                "request_date": requester.request_date,
             })
         return request_list, 200
+    else:
+        abort(404)
+
+
+@app.route("/get-content/genres", methods=["GET"])
+def getGenres():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args != {}:
+        fetcher = Books.query.filter_by(**args).all()
+    else:
+        fetcher = Books.query.offset(start).limit(1000).all()
+
+    if fetcher:
+        genre_list = []
+        for genre in fetcher:
+            genre_list.append(genre.genre)
+        return sorted(list(set(genre_list))), 200
     else:
         abort(404)
 
@@ -285,6 +329,30 @@ def getRecentBook():
     return universalContent, 200
 
 
+@app.route("/search-content", methods=["GET"])
+def searchBooks():
+    keyword = request.args.to_dict()['keyword']
+    fetcher = Books.query.filter(Books.book_name.like(f"%{keyword}%")).limit(500).all()
+    print(keyword)
+    if fetcher:
+        books_list = []
+        for book in fetcher:
+            books_list.append({
+                "book_id": book.book_id,
+                "book_name": book.book_name,
+                "img": book.img,
+                "author_id": book.author_id,
+                "author_name": book.author_name,
+                "section_id": book.section_id,
+                "genre": book.genre,
+                "date_added": book.date_added,
+            })
+        return books_list, 200
+    else:
+        abort(404)
+    
+
+
 # Data Insertion
 @app.route("/push-content/books", methods=["GET", "POST"])
 def pushBooks():
@@ -301,6 +369,7 @@ def pushBooks():
                 book_name=form["book_name"],
                 img=form["img"],
                 author_id=form["author_id"],
+                author_name=form["author_name"],
                 section_id=form["section_id"],
                 genre=form["genre"],
                 date_added=datetime.strptime(form["date_added"], "%Y-%m-%d")
@@ -436,24 +505,23 @@ def pushIssues():
             return {"message": "You have already rated this book, you can't do it again."}, 406
 
 
-@app.route("/push-content/requests", methods=["GET", "POST"])
+@app.route("/push-content/requests", methods=["GET"])
 def pushRequests():
-    form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/requests?book_id={form['book_id']}&user_id={form['user_id']}"
-    fetcher = requests.get(roger)
-    if request.method == "POST":
-        if fetcher.status_code == 404:
-            new_issue = Requests(
-                book_id=form["book_id"],
-                user_id=form["user_id"],
-                request_date=datetime.strptime(
-                    form["request_date"], "%Y-%m-%d"),
-            )
-            db.session.add(new_issue)
-            db.session.commit()
-            return f"New Requests added Book ID: {form['book_id']} & User ID: {form['user_id']}", 200
-        else:
-            return {"message": "You have already requested this book, you can't do it again."}, 406
+    form = request.args.to_dict()
+    # roger = f"http://127.0.0.1:5000/get-content/requests?book_id={form['book_id']}&user_id={form['user_id']}"
+    # fetcher = requests.get(roger)
+    # if fetcher.status_code == 404:
+    new_issue = Requests(
+        book_id=form["book_id"],
+        user_id=form["user_id"],
+        request_date=datetime.strptime(
+            form["request_date"], "%Y-%m-%d"),
+    )
+    db.session.add(new_issue)
+    db.session.commit()
+    return f"New Requests added Book ID: {form['book_id']} & User ID: {form['user_id']}", 200
+    # else:
+    #     abort(406)
 
 
 # Data Updation
@@ -658,7 +726,7 @@ def delete_content():
 
 
 # with app.app_context():
-#     Requests.__table__.create(db.engine)
+#     Books.__table__.create(db.engine)
 
 if __name__ == "__main__":
     app.run(debug=True)

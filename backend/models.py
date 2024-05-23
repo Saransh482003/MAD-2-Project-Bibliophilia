@@ -9,6 +9,7 @@ class Books(db.Model):
     book_name = db.Column(db.String, nullable=False)
     img = db.Column(db.String, nullable=False)
     author_id = db.Column(db.String, nullable=False)
+    author_name = db.Column(db.String, nullable=False)
     section_id = db.Column(db.String, nullable=False)
     genre = db.Column(db.String, nullable=False, default="Fiction")
     date_added = db.Column(db.DateTime, nullable=False, default = datetime.strftime(datetime.today(), "%d-%m-%Y"))
@@ -36,6 +37,7 @@ class Users(db.Model):
 class Sections(db.Model):
     section_id = db.Column(db.String, primary_key=True)
     section_name = db.Column(db.String, nullable=False)
+    img = db.Column(db.String, nullable=False)
     date_added = db.Column(db.DateTime, nullable=False, default = datetime.strftime(datetime.today(), "%d-%m-%Y"))
 
 class Ratings(db.Model):

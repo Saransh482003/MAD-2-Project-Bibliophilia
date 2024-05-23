@@ -11,7 +11,7 @@
       <p class="logoText">Bibliophilia</p>
     </router-link>
     <div class="navLinks">
-      <router-link to="/home" class="link">Home</router-link>
+      <router-link to="/" class="link">Home</router-link>
       <router-link to="/about" class="link">About</router-link>
       <router-link to="/my-books" class="link">My Books</router-link>
       <div class="profile">
