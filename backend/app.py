@@ -1,8 +1,10 @@
 from flask import Flask, jsonify, request, abort
+from sqlalchemy.sql.expression import func
 from flask_cors import CORS
 from models import *
 import random
 import requests
+from datetime import date, datetime
 
 app = Flask(__name__)
 
@@ -53,10 +55,11 @@ def getBooks():
     else:
         abort(404)
 
+
 @app.route("/get-content/latestBooks", methods=["GET"])
 def getLatestBooks():
     fetcher = Books.query.order_by(
-            Books.date_added.desc()).limit(500).all()
+        Books.date_added.desc()).limit(500).all()
 
     if fetcher:
         books_list = []
@@ -332,8 +335,102 @@ def getRecentBook():
 @app.route("/search-content", methods=["GET"])
 def searchBooks():
     keyword = request.args.to_dict()['keyword']
-    fetcher = Books.query.filter(Books.book_name.like(f"%{keyword}%")).limit(500).all()
-    print(keyword)
+    fetcher = Books.query.filter(
+        Books.book_name.like(f"%{keyword}%")).limit(500).all()
+    if fetcher:
+        books_list = []
+        for book in fetcher:
+            books_list.append({
+                "book_id": book.book_id,
+                "book_name": book.book_name,
+                "img": book.img,
+                "author_id": book.author_id,
+                "author_name": book.author_name,
+                "section_id": book.section_id,
+                "genre": book.genre,
+                "date_added": book.date_added.strftime('%d %b %Y'),
+            })
+        return books_list, 200
+    else:
+        abort(404)
+
+
+@app.route("/search-content/my-books", methods=["GET"])
+def searchMyBooks():
+    keyword = request.args.to_dict()['keyword']
+    user_id = request.args.to_dict()['user_id']
+    fetcher = db.session.query(Issues, Books).join(Books, Books.book_id == Issues.book_id).filter(
+        Issues.user_id == user_id, Books.book_name.like(f"%{keyword}%")).all()
+    if fetcher:
+        books_list = []
+        for book in fetcher:
+            books_list.append({
+                "book_id": book[1].book_id,
+                "book_name": book[1].book_name,
+                "img": book[1].img,
+                "author_id": book[1].author_id,
+                "author_name": book[1].author_name,
+                "section_id": book[1].section_id,
+                "genre": book[1].genre,
+                "date_added": book[1].date_added.strftime('%d %b %Y')   ,
+                "request_date": book[0].request_date.strftime('%d %b %Y'),
+                "doi": book[0].doi.strftime('%d %b %Y'),
+                "dor": book[0].dor.strftime('%d %b %Y'),
+            })
+        return books_list, 200
+    else:
+        abort(404)
+
+
+@app.route("/get-content/myBooks", methods=["GET"])
+def myBooks():
+    args = request.args.to_dict()
+    user_id = args['user_id']
+    request_type = ""
+    if "all" in args:
+        request_type = args['all']
+    fetcher = Issues.query.filter_by(user_id=user_id).limit(500).all()
+    today_date = datetime.now()
+    if fetcher:
+        books_list = []
+        if request_type == "true":
+            for book in fetcher:
+                bookDetails = Books.query.filter_by(
+                    book_id=book.book_id).first()
+                books_list.append({
+                    "book_id": bookDetails.book_id,
+                    "book_name": bookDetails.book_name,
+                    "img": bookDetails.img,
+                    "author_id": bookDetails.author_id,
+                    "author_name": bookDetails.author_name,
+                    "request_date": book.request_date.strftime('%d %b %Y'),
+                    "doi": book.doi.strftime('%d %b %Y'),
+                    "dor": book.dor.strftime('%d %b %Y'),
+                })
+        else:
+            for book in fetcher:
+                if today_date < book.dor:
+                    bookDetails = Books.query.filter_by(
+                        book_id=book.book_id).first()
+                    books_list.append({
+                        "book_id": bookDetails.book_id,
+                        "book_name": bookDetails.book_name,
+                        "img": bookDetails.img,
+                        "author_id": bookDetails.author_id,
+                        "author_name": bookDetails.author_name,
+                        "request_date": book.request_date.strftime('%d %b %Y'),
+                        "doi": book.doi.strftime('%d %b %Y'),
+                        "dor": book.dor.strftime('%d %b %Y'),
+                    })
+        return books_list, 200
+    else:
+        abort(404)
+
+
+@app.route("/get-content/randomBooks", methods=["GET"])
+def randomBooks():
+    fetcher = Books.query.order_by(func.random()).limit(10).all()
+
     if fetcher:
         books_list = []
         for book in fetcher:
@@ -350,10 +447,10 @@ def searchBooks():
         return books_list, 200
     else:
         abort(404)
-    
-
 
 # Data Insertion
+
+
 @app.route("/push-content/books", methods=["GET", "POST"])
 def pushBooks():
     form = request.get_json()

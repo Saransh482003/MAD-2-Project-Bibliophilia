@@ -12,13 +12,6 @@
 <script>
 export default {
   name: "ErrorPage",
-  props: {
-    msg: {
-      type: String,
-      required: true,
-      default: "404 - PAGE NOT FOUND",
-    },
-  },
 };
 </script>
 

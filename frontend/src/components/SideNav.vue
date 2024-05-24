@@ -1,40 +1,86 @@
 <template>
   <div class="sideNav">
-    <div class="navBtns" @click="emitChangeMiddleView(2)" id="nav2">
-      <div class="navBtnImgContainer">
-        <img src="@/assets/images/search_icon.png" alt="" class="navBtnImg" />
+    <div class="sideNavInner" v-if="page == 'home'">
+      <div class="navBtns" @click="emitChangeMiddleView(2)" id="nav2">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/search_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Search</p>
       </div>
-      <p class="navBtnsText">Search</p>
+      <div class="navBtns" @click="emitChangeMiddleView(1)" id="nav1">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/home_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Home</p>
+      </div>
+      <div class="navBtns" @click="emitChangeMiddleView(3)" id="nav3">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/books_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">All Books</p>
+      </div>
+      <div class="navBtns" @click="emitChangeMiddleView(4)" id="nav4">
+        <div class="navBtnImgContainer">
+          <img
+            src="@/assets/images/section_icon.png"
+            alt=""
+            class="navBtnImg"
+          />
+        </div>
+        <p class="navBtnsText">All Sections</p>
+      </div>
+      <div class="navBtns" @click="emitChangeMiddleView(5)" id="nav5">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/latest_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Latest Books</p>
+      </div>
+      <div class="navBtns" @click="emitChangeMiddleView(6)" id="nav6">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/author_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">All Authors</p>
+      </div>
+      <div class="navBtns" @click="emitChangeMiddleView(7)" id="nav7">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/genre_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">All Genres</p>
+      </div>
     </div>
-    <div class="navBtns" @click="emitChangeMiddleView(3)" id="nav3">
-      <div class="navBtnImgContainer">
-        <img src="@/assets/images/books_icon.png" alt="" class="navBtnImg" />
+    <div class="sideNavInner" v-else-if="page == 'my-books'">
+      <div class="navBtns" @click="emitChangeMyBooksView(2)" id="nav2">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/search_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Search</p>
       </div>
-      <p class="navBtnsText">All Books</p>
-    </div>
-    <div class="navBtns" @click="emitChangeMiddleView(4)" id="nav4">
-      <div class="navBtnImgContainer">
-        <img src="@/assets/images/section_icon.png" alt="" class="navBtnImg" />
+      <div class="navBtns" @click="emitChangeMyBooksView(1)" id="nav1">
+        <div class="navBtnImgContainer">
+          <img
+            src="@/assets/images/my_books_icon.png"
+            alt=""
+            class="navBtnImg"
+          />
+        </div>
+        <p class="navBtnsText">My Books</p>
       </div>
-      <p class="navBtnsText">All Sections</p>
-    </div>
-    <div class="navBtns" @click="emitChangeMiddleView(5)" id="nav5">
-      <div class="navBtnImgContainer">
-        <img src="@/assets/images/latest_icon.png" alt="" class="navBtnImg" />
+      <div class="navBtns" @click="emitChangeMyBooksView(3)" id="nav3">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/stats_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Statistics</p>
       </div>
-      <p class="navBtnsText">Latest Books</p>
-    </div>
-    <div class="navBtns" @click="emitChangeMiddleView(6)" id="nav6">
-      <div class="navBtnImgContainer">
-        <img src="@/assets/images/author_icon.png" alt="" class="navBtnImg" />
+      <div class="navBtns" @click="emitChangeMyBooksView(4)" id="nav4">
+        <div class="navBtnImgContainer">
+          <img
+            src="@/assets/images/feedback_icon.png"
+            alt=""
+            class="navBtnImg"
+          />
+        </div>
+        <p class="navBtnsText">Feedbacks</p>
       </div>
-      <p class="navBtnsText">All Authors</p>
-    </div>
-    <div class="navBtns" @click="emitChangeMiddleView(7)" id="nav7">
-      <div class="navBtnImgContainer">
-        <img src="@/assets/images/genre_icon.png" alt="" class="navBtnImg" />
-      </div>
-      <p class="navBtnsText">All Genres</p>
     </div>
   </div>
 </template>
@@ -42,9 +88,27 @@
 <script>
 export default {
   name: "SideNav",
+  props: {
+    page: {
+      type: String,
+      required: true,
+      default: "home",
+    },
+  },
   methods: {
     emitChangeMiddleView(view) {
       this.$emit("changeView", view);
+
+      let navs = document.getElementsByClassName("navBtns");
+      Array.from(navs).forEach((element) => {
+        element.classList.remove("selected");
+      });
+
+      let nav = document.getElementById(`nav${view}`);
+      nav.classList.add("selected");
+    },
+    emitChangeMyBooksView(view) {
+      this.$emit("changeMyBookView", view);
 
       let navs = document.getElementsByClassName("navBtns");
       Array.from(navs).forEach((element) => {
@@ -69,6 +133,13 @@ export default {
   padding: 1rem 0rem;
   z-index: 5;
   background: linear-gradient(180deg, #25352b, black);
+}
+.sideNavInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  width: 100%;
 }
 .navBtns {
   display: flex;

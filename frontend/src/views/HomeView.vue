@@ -1,8 +1,93 @@
 <template>
   <div class="middle">
-    <SideNav @changeView="changeMiddleView" />
+    <SideNav @changeView="changeMiddleView" page="home" />
 
-    <div class="mainPanel" v-if="changeView == 2">
+    <div class="mainPanel" v-if="changeView == 1">
+      <div class="myBooks">
+        <p class="myBooksHead">MY BOOKS</p>
+        <div class="myBooksTrack" v-if="myBooks.length > 0">
+          <div
+            v-for="(book, index) in myBooks"
+            :key="index"
+            class="card"
+            @click="changePreviewBook(book.book_id)"
+          >
+            <div class="bookImgContainer">
+              <img :src="book.img" alt="" class="bookImg" />
+            </div>
+            <div class="bookContent">
+              <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+              <p class="bookAuthor">
+                ISSUE: <span>{{ book.doi }}</span>
+              </p>
+              <p class="bookAuthor">
+                RETURN: <span>{{ book.dor }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div class="myBooksTrack" v-else>
+          <div
+            v-for="(book, index) in myBooks"
+            :key="index"
+            class="card"
+            @click="changePreviewBook(book.book_id)"
+          >
+            <p class="myBooksHead">No issued books found.</p>
+          </div>
+        </div>
+      </div>
+      <div class="myBooks">
+        <p class="myBooksHead">RECOMMENDATIONS FOR YOU</p>
+        <div class="myBooksTrack">
+          <div
+            v-for="(book, index) in randomBooks"
+            :key="index"
+            class="card"
+            @click="changePreviewBook(book.book_id)"
+          >
+            <div class="bookImgContainer">
+              <img :src="book.img" alt="" class="bookImg" />
+            </div>
+            <div class="bookContent">
+              <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+              <p class="bookAuthor">
+                AUTHOR: <span>{{ book.author_name }}</span>
+              </p>
+              <p class="bookAuthor">
+                GENRE: <span>{{ book.genre }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="myBooks">
+        <p class="myBooksHead">LATEST RELEASES</p>
+        <div class="myBooksTrack">
+          <div
+            v-for="(book, index) in latestBooks.slice(0, 10)"
+            :key="index"
+            class="card"
+            @click="changePreviewBook(book.book_id)"
+          >
+            <div class="bookImgContainer">
+              <img :src="book.img" alt="" class="bookImg" />
+            </div>
+            <div class="bookContent">
+              <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+              <p class="bookAuthor">
+                AUTHOR: <span>{{ book.author_name }}</span>
+              </p>
+              <p class="bookAuthor">
+                GENRE: <span>{{ book.genre }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mainPanel" v-else-if="changeView == 2">
       <div class="searchCont">
         <div class="searchbox">
           <input
@@ -35,7 +120,7 @@
       </div>
     </div>
 
-    <div class="mainPanel" v-if="changeView == 3">
+    <div class="mainPanel" v-else-if="changeView == 3">
       <div
         v-for="(book, index) in books"
         :key="index"
@@ -57,7 +142,7 @@
       </div>
     </div>
 
-    <div class="mainPanel" v-if="changeView == 4">
+    <div class="mainPanel" v-else-if="changeView == 4">
       <div v-for="(section, index) in sections" :key="index" class="authorCard">
         <div class="authorImgContainer">
           <img :src="section.img" alt="" class="authorImg" />
@@ -68,7 +153,7 @@
       </div>
     </div>
 
-    <div class="mainPanel" v-if="changeView == 5">
+    <div class="mainPanel" v-else-if="changeView == 5">
       <div
         v-for="(book, index) in latestBooks"
         :key="index"
@@ -90,7 +175,7 @@
       </div>
     </div>
 
-    <div class="mainPanel" v-if="changeView == 6">
+    <div class="mainPanel" v-else-if="changeView == 6">
       <div v-for="(author, index) in authors" :key="index" class="authorCard">
         <div class="authorImgContainer">
           <img :src="author.img" alt="" class="authorImg" />
@@ -101,7 +186,7 @@
       </div>
     </div>
 
-    <div class="mainPanel" v-if="changeView == 7">
+    <div class="mainPanel" v-else-if="changeView == 7">
       <div
         v-for="(genre, index) in genres"
         :key="index"
@@ -250,7 +335,9 @@
       <div class="actions">
         <div
           :class="`actionBtns ${
-            allowedRequest.status == 602 ? 'disableBtn' : ''
+            (allowedRequest.status == 602) | (allowedRequest.status == 603)
+              ? 'disableBtn'
+              : ''
           }`"
           @click="request_book($event, previewBook.book_id)"
           :title="allowedRequest.message"
@@ -259,7 +346,9 @@
             src="@/assets/images/request_book.png"
             alt=""
             :class="`actionBtnImg ${
-              allowedRequest.status == 602 ? 'disableBtnImg' : ''
+              (allowedRequest.status == 602) | (allowedRequest.status == 603)
+                ? 'disableBtnImg'
+                : ''
             }`"
           />
           Request
@@ -281,6 +370,8 @@ export default {
   name: "HomeView",
   data() {
     return {
+      myBooks: [],
+      randomBooks: [],
       searchBooks: [],
       books: [],
       sections: [],
@@ -293,23 +384,32 @@ export default {
         message: "Click to Request Book",
         limit: 0,
       },
-      user_id: "REPA0302",
+      user_id: "REPA0354",
       changeView: 1,
     };
   },
   created() {
-    this.fetchBooks();
     this.changeView = 1;
+    this.fetchRandomBooks();
+    this.fetchLatest();
+    this.fetchMyBooks();
+    this.fetchBooks();
   },
   methods: {
     changeMiddleView(view) {
       this.changeView = view;
-      if (view == 4) {
+      if (view == 1) {
+        this.fetchRandomBooks();
+        this.fetchLatest();
+        this.fetchMyBooks();
+      } else if (view == 3) {
+        this.fetchBooks();
+      } else if (view == 4) {
         this.fetchSections();
-      } else if (view == 6) {
-        this.fetchAuthors();
       } else if (view == 5) {
         this.fetchLatest();
+      } else if (view == 6) {
+        this.fetchAuthors();
       } else if (view == 7) {
         this.fetchGenres();
       }
@@ -326,7 +426,8 @@ export default {
         .then((response) => {
           this.searchBooks = [];
           this.searchBooks = response.data;
-        });
+        })
+        .catch(() => {});
     },
     changePreviewBook(book_id) {
       axios
@@ -345,12 +446,12 @@ export default {
         .catch(() => {
           this.$router.push("/error");
         });
-      this.requestAllowance("UNIH4233", this.user_id);
+      this.requestAllowance(book_id, this.user_id);
     },
     requestAllowance(book_id, user_id) {
       axios
         .get(
-          `http://127.0.0.1:5000/get-content/requests?book_id=${book_id}&user_id=${user_id}`
+          `http://127.0.0.1:5000/get-content/issues?book_id=${book_id}&user_id=${user_id}`
         )
         .then(() => {
           this.allowedRequest.status = 602;
@@ -358,15 +459,44 @@ export default {
         })
         .catch(() => {
           axios
-            .get(`http://127.0.0.1:5000/get-content/requests?user_id=REPA0251`)
+            .get(
+              `http://127.0.0.1:5000/get-content/requests?book_id=${book_id}&user_id=${user_id}`
+            )
             .then((response) => {
               if (response.data.length >= 5) {
                 this.allowedRequest.status = 603;
-                this.allowedRequest.message = "Request Limit Exhausted";
+                this.allowedRequest.message = "Already Requested";
               } else {
                 this.allowedRequest.limit = 5 - response.data.length;
               }
+            })
+            .catch(() => {
+              this.allowedRequest.status = 601;
+              this.allowedRequest.message = "Click to Request";
             });
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchMyBooks() {
+      axios
+        .get(
+          `http://127.0.0.1:5000/get-content/myBooks?user_id=${this.user_id}`
+        )
+        .then((response) => {
+          this.myBooks = response.data;
+          // this.changePreviewBook(this.myBooks[0].book_id);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchRandomBooks() {
+      axios
+        .get(`http://127.0.0.1:5000/get-content/randomBooks`)
+        .then((response) => {
+          this.randomBooks = response.data;
         })
         .catch(() => {
           this.$router.push("/error");
@@ -377,7 +507,6 @@ export default {
         .get("http://127.0.0.1:5000/get-content/books")
         .then((response) => {
           this.books = response.data;
-          this.changePreviewBook(this.books[0].book_id);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -485,18 +614,10 @@ export default {
   flex-wrap: wrap;
   width: 100%;
   height: 40.1rem;
-  background-color: beige;
-}
-.sideNav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: white;
-  width: 5%;
-  height: 100%;
-  padding: 1rem 0rem;
-  z-index: 5;
-  background: linear-gradient(180deg, #25352b, black);
+  background: url("@/assets/images/biblio_bg.jpg");
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 .mainPanel {
   display: flex;
@@ -508,11 +629,6 @@ export default {
   padding-top: 0.7rem;
   overflow: hidden;
   overflow-y: scroll;
-  z-index: 3;
-  /* background: url("https://img.freepik.com/free-vector/hand-drawn-painted-whitewash-background_23-2151214448.jpg");
-  background-position: center center;
-  background-size: cover;
-  background-repeat: no-repeat; */
 }
 .previewPanel {
   display: flex;
@@ -520,7 +636,6 @@ export default {
   justify-content: center;
   width: 20%;
   height: 100%;
-  /* background-color: #fff6e6; */
   background: url("https://thumbs.dreamstime.com/b/paper-texture-1847313.jpg");
   background-position: center center;
   background-size: cover;
@@ -597,7 +712,6 @@ export default {
   height: 20rem;
   width: 100%;
   position: relative;
-  /* background-color: aqua; */
 }
 .downloadPDFContainer {
   position: absolute;
@@ -624,7 +738,6 @@ export default {
 }
 .downloadPDF:hover {
   background-color: #25352b;
-  /* padding: 0.35rem; */
 }
 .downloadPDF:hover .pdfIcon {
   filter: none;
@@ -633,7 +746,6 @@ export default {
   width: 100%;
   height: 100%;
   filter: grayscale(100%) brightness(0);
-  /* transition: all 0.2s ease; */
 }
 .imgContainer {
   height: 100%;
@@ -648,7 +760,6 @@ export default {
   height: 1.3rem;
   width: 100%;
   margin: 0.8rem 0rem;
-  /* justify-content: center; */
 }
 .star {
   margin-right: 0.4rem;
@@ -784,7 +895,6 @@ export default {
   width: 100%;
   height: 9%;
   background-color: #25352b;
-  /* border-top: 3px solid #25352b; */
 }
 .actionBtns {
   display: flex;
@@ -800,7 +910,6 @@ export default {
   width: auto;
   margin-right: 0.3rem;
   transition: all 0.2s ease;
-  /* filter: grayscale(100%) brightness(1000); */
 }
 .sideBtn {
   background-color: white;
@@ -865,7 +974,9 @@ export default {
 .genreCard {
   margin: 0.5rem 1.2rem;
   height: max-content;
+  border-radius: 10rem;
   color: #25352b;
+  box-shadow: 0 0.25rem 1rem #00000026;
 }
 .evenGenreCard {
   background-color: #25352b;
@@ -902,5 +1013,23 @@ export default {
   border: 0rem;
   background-color: #111914;
   border-bottom: 3px solid #e6ac45;
+}
+.myBooks {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 25rem;
+}
+.myBooksHead {
+  margin: 0.5rem 1.4rem;
+  color: rgb(61, 61, 61);
+  font-weight: 700;
+}
+.myBooksTrack {
+  display: flex;
+  width: max-content;
+  height: 100%;
+  overflow: hidden;
+  overflow-x: scroll;
 }
 </style>
