@@ -97,16 +97,34 @@
         </div>
       </div>
     </div>
-    <div class="mainPanel" v-if="changeMyBookView == 3">Stats</div>
+    <div class="mainPanel" v-if="changeMyBookView == 3">
+      <div class="statistics">
+        <p class="myBooksHead">YOUR STATISTICS</p>
+        <div class="coreStatistics">
+          <div class="charts">
+            <div class="barChart">
+              <BarChartView :barData="barChartData" />
+            </div>
+            <div class="pieChart">
+              <PieChartView :pieData="pieChartData" />
+            </div>
+          </div>
+          <div class="dataValues"></div>
+        </div>
+      </div>
+    </div>
     <div class="mainPanel" v-if="changeMyBookView == 4">Feedbacks</div>
   </div>
 </template>
 
 <script>
 import axios from "axios";
+import BarChartView from "@/components/BarChartView.vue";
+import PieChartView from "@/components/PieChartView.vue";
 import SideNav from "@/components/SideNav.vue";
+
 export default {
-  components: { SideNav },
+  components: { SideNav, BarChartView, PieChartView },
   name: "MyBooksView",
   data() {
     return {
@@ -114,6 +132,8 @@ export default {
       myBooks: [],
       myHistory: [],
       searchBooks: [],
+      barChartData: [],
+      pieChartData: [],
       user_id: "REPA0354",
     };
   },
@@ -130,6 +150,8 @@ export default {
         this.fetchMyHistory();
       } else if (view == 2) {
         this.searchBooks = [];
+      } else if (view == 3) {
+        this.fetchStatistics();
       }
     },
     fetchMyBooks() {
@@ -154,6 +176,17 @@ export default {
         .then((response) => {
           this.myHistory = response.data;
           // this.changePreviewBook(this.myBooks[0].book_id);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchStatistics() {
+      axios
+        .get(`http://127.0.0.1:5000/get-statistics?user_id=${this.user_id}`)
+        .then((response) => {
+          this.barChartData = response.data["barchart"];
+          this.pieChartData = response.data["piechart"];
         })
         .catch(() => {
           this.$router.push("/error");
@@ -348,5 +381,43 @@ export default {
   border: 0rem;
   background-color: #111914;
   border-bottom: 3px solid #e6ac45;
+}
+.statistics {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: max-content;
+}
+.coreStatistics {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0rem 1.4rem;
+}
+.charts {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 20rem;
+}
+.barChart {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60%;
+  height: 100%;
+  /* background-color: #e6ac45; */
+}
+.pieChart {
+  display: flex;
+  width: 40%;
+  height: 100%;
+  /* background-color: #e6ac45; */
+}
+.dataValues {
+  display: flex;
+  flex-direction: column;
+  width: 40%;
+  height: 100%;
 }
 </style>

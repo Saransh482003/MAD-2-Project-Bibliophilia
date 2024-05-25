@@ -372,7 +372,7 @@ def searchMyBooks():
                 "author_name": book[1].author_name,
                 "section_id": book[1].section_id,
                 "genre": book[1].genre,
-                "date_added": book[1].date_added.strftime('%d %b %Y')   ,
+                "date_added": book[1].date_added.strftime('%d %b %Y'),
                 "request_date": book[0].request_date.strftime('%d %b %Y'),
                 "doi": book[0].doi.strftime('%d %b %Y'),
                 "dor": book[0].dor.strftime('%d %b %Y'),
@@ -448,9 +448,51 @@ def randomBooks():
     else:
         abort(404)
 
+
+@app.route("/get-statistics", methods=["GET"])
+def getStatistics():
+    user_id = request.args.to_dict()["user_id"]
+
+    fetchRequests = Requests.query.order_by(
+        Requests.request_date.desc()).filter_by(user_id=user_id).all()
+    fetchIssues = Issues.query.order_by(
+        Issues.request_date.desc()).filter_by(user_id=user_id).all()
+
+    fetchData = [i for i in fetchRequests]
+    fetchData.extend([i for i in fetchIssues])
+    dates = [[i.request_date.strftime(
+        '%b'), i.request_date.year] for i in fetchData]
+    year = sorted(list(set([i[1] for i in dates])))[::-1]
+    barData = {}
+    for i in year:
+        months = [j[0] for j in dates if j[1] == i]
+        monDict = {i: months.count(i) for i in months[::-1]}
+        barData[i] = monDict
+
+    finalBarData = []
+    counter = 0
+    for i in barData:
+        for j in dict(reversed(list(barData[i].items()))):
+            if counter < 10:
+                finalBarData.append([f"{j}'{i%100}", barData[i][j]])
+                counter += 1
+            else:
+                break
+
+    books = []
+    for i in fetchData:
+        book = Books.query.filter_by(book_id=i.book_id).first()
+        books.append(book.genre)
+
+    pieData = dict(sorted({i: books.count(i)
+                   for i in books}.items(), key=lambda x: x[1], reverse=True))
+    if len(pieData) > 5:
+        pieData = dict(list(pieData.items())[:5])
+    finalPieData = [[i,pieData[i]] for i in pieData]
+    return {"barchart": finalBarData[::-1], "piechart": finalPieData}, 200
+
+
 # Data Insertion
-
-
 @app.route("/push-content/books", methods=["GET", "POST"])
 def pushBooks():
     form = request.get_json()
