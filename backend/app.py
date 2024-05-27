@@ -450,7 +450,7 @@ def randomBooks():
 
 
 @app.route("/get-statistics", methods=["GET"])
-def getStatistics():
+def getUserStatistics():
     user_id = request.args.to_dict()["user_id"]
 
     fetchRequests = Requests.query.order_by(
@@ -488,8 +488,67 @@ def getStatistics():
                    for i in books}.items(), key=lambda x: x[1], reverse=True))
     if len(pieData) > 5:
         pieData = dict(list(pieData.items())[:5])
-    finalPieData = [[i,pieData[i]] for i in pieData]
-    return {"barchart": finalBarData[::-1], "piechart": finalPieData}, 200
+    finalPieData = [[i, pieData[i]] for i in pieData]
+
+    fetchUser = requests.get(
+        f"http://127.0.0.1:5000/get-content/users?user_id={user_id}")
+    fetchUser = fetchUser.json()[0]
+
+    active_month = ""
+    index = 0
+    activity = 0
+    for j, i in enumerate(finalBarData):
+        if i[1] > activity:
+            activity = i[1]
+            index = j
+    if len(finalBarData) > 0:
+        active_month = finalBarData[index][0]
+    ratings = Ratings.query.filter_by(user_id=user_id).all()
+    now = f"{datetime.now()}"
+    days_last_loged = (datetime.strptime(now, "%Y-%m-%d %H:%M:%S.%f") -
+                       datetime.strptime(fetchUser["last_loged"], "%a, %d %b %Y %H:%M:%S %Z")).days
+    cardData = {
+        "total_issued": len(fetchIssues),
+        "total_requests": len(fetchRequests),
+        "most_active_month": active_month,
+        "total_ratings": len(ratings),
+        "days_last_loged": days_last_loged
+    }
+
+    fetchUser["last_loged"] = datetime.strptime(
+        f"{fetchUser['last_loged']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
+    fetchUser["doj"] = datetime.strptime(
+        f"{fetchUser['doj']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
+    fetchUser["dob"] = datetime.strptime(
+        f"{fetchUser['dob']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
+
+    fetchRating = requests.get(
+        f"http://127.0.0.1:5000/get-content/ratings?user_id={user_id}")
+    fetchRating = fetchRating.json()
+    score = 100*len(fetchIssues) + 250*len(fetchRating)
+    # score = score*0
+    rank = "Sage" if score >= 13750 else "Scholar" if score >= 5000 else "Literati" if score >= 1750 else "Reader" if score >= 500 else "No"
+    next_criteria = {
+        "No":[
+            "Read 5 Books"
+        ],
+        "Reader":[
+            "Read 10 Books",
+            "Review 3 Books",
+        ],
+        "Literati":[
+            "Read 25 Books",
+            "Review 10 Books",
+        ],
+        "Scholar":[
+            "Read 75 Books",
+            "Review 25 Books",
+        ],
+        "Sage":[
+            "Congratulations!! on reaching the pinnacle."
+        ]
+    }
+    return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank,"next_criteria":next_criteria[rank]}, 200
 
 
 # Data Insertion

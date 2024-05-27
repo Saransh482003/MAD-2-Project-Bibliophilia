@@ -1,5 +1,7 @@
 <template>
-  <Bar class="barChart" :data="chartData" :options="chartOptions" />
+  <div class="canvas">
+    <Bar class="barChart" :data="chartData" :options="chartOptions" />
+  </div>
 </template>
 
 <script>
@@ -80,10 +82,7 @@ export default {
               padding: 10,
             },
             grid: {
-              color: "rgba(200, 200, 200, 0.3)",
-              lineWidth: 1,
-              drawOnChartArea: true,
-              drawTicks: false,
+              display: false,
             },
           },
           y: {
@@ -97,8 +96,8 @@ export default {
               padding: 10,
             },
             grid: {
-              color: "rgba(200, 200, 200, 0.3)",
-              lineWidth: 1,
+              color: "rgba(255, 255, 255, 0.2)",
+              lineWidth: 2,
               drawOnChartArea: true,
               drawTicks: false,
             },
@@ -164,8 +163,21 @@ export default {
 </script>
 
 <style scoped>
+.canvas {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  margin: 1rem;
+  padding-top: 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
 .barChart {
   height: 100%;
   width: 100%;
+  margin: 1rem;
 }
 </style>

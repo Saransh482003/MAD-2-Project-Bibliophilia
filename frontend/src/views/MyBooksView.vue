@@ -99,17 +99,149 @@
     </div>
     <div class="mainPanel" v-if="changeMyBookView == 3">
       <div class="statistics">
-        <p class="myBooksHead">YOUR STATISTICS</p>
+        <p class="myBooksHead">DASHBOARD</p>
         <div class="coreStatistics">
-          <div class="charts">
-            <div class="barChart">
-              <BarChartView :barData="barChartData" />
+          <div class="d1profileContainer">
+            <div class="d1profile">
+              <div class="d1profilePicContainer">
+                <img
+                  v-if="statsData.user_info.gender == 'male'"
+                  src="@/assets/images/male profile.png"
+                  alt="username"
+                  class="d1profilePic"
+                />
+                <img
+                  v-else
+                  src="@/assets/images/female profile.png"
+                  alt="username"
+                  class="d1profilePic"
+                />
+              </div>
+              <div class="d1profileContent">
+                <p class="d1profileHead">{{ statsData.user_info.user_name }}</p>
+                <p class="d1profileEmail">
+                  Email: <span>{{ statsData.user_info.email }}</span>
+                </p>
+                <p class="d1profileEmail">
+                  Date Joined: <span>{{ statsData.user_info.doj }}</span>
+                </p>
+                <p class="d1profileEmail">
+                  Last Loged: <span>{{ statsData.user_info.last_loged }}</span>
+                </p>
+              </div>
             </div>
-            <div class="pieChart">
-              <PieChartView :pieData="pieChartData" />
+            <div class="d1ranking">
+              <p class="d1CardHeader">{{ statsData.rank }} League</p>
+              <div class="leagueContainer">
+                <img
+                  v-if="statsData.rank == 'Sage'"
+                  src="@/assets/images/Sage_logo.png"
+                  :alt="`${statsData.rank} League`"
+                  class="leagueLogo"
+                />
+                <img
+                  v-if="statsData.rank == 'Scholar'"
+                  src="@/assets/images/Scholar_logo.png"
+                  :alt="`${statsData.rank} League`"
+                  class="leagueLogo"
+                />
+                <img
+                  v-if="statsData.rank == 'Literati'"
+                  src="@/assets/images/Literati_logo.png"
+                  :alt="`${statsData.rank} League`"
+                  class="leagueLogo"
+                />
+                <img
+                  v-if="statsData.rank == 'Reader'"
+                  src="@/assets/images/Reader_logo.png"
+                  :alt="`${statsData.rank} League`"
+                  class="leagueLogo"
+                />
+              </div>
+            </div>
+            <div class="d1rankingSubTop">
+              <div
+                class="d1rankingSubs"
+                v-if="statsData.rank != 'Sage'"
+                style="margin-bottom: 1rem"
+              >
+                <p class="d1CardHeader">Next Objective</p>
+                <div class="objectives">
+                  <div
+                    class="objectiveNote"
+                    v-for="(note, index) in statsData.next_criteria"
+                    :key="index"
+                  >
+                    <div class="bulletContainer">
+                      <img
+                        src="@/assets/images/bullet.png"
+                        alt="bullet"
+                        class="bullet"
+                      />
+                    </div>
+                    <div class="bulletPoint">
+                      <p class="bulletText">{{ note }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="d1rankingSubs" v-else style="margin-bottom: 1rem">
+                <p class="d1CardHeader">No New Objective</p>
+                <div class="objectives">
+                  <div
+                    class="objectiveNote"
+                    v-for="(note, index) in statsData.next_criteria"
+                    :key="index"
+                  >
+                    <div class="bulletPoint">
+                      <p class="bulletText">{{ note }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="d1rankingSubs">
+                <p class="d1CardHeader">Score</p>
+                <div class="objectives" style="flex-direction: row">
+                  <p class="scoreText">{{ statsData.score }}</p>
+                  <img
+                    src="@/assets/images/points.png"
+                    alt="points"
+                    class="scorePoint"
+                  />
+                </div>
+              </div>
             </div>
           </div>
-          <div class="dataValues"></div>
+          <div class="charts">
+            <div class="barChart">
+              <BarChartView :barData="statsData.barchart" class="chartView" />
+            </div>
+            <div class="pieChart">
+              <PieChartView :pieData="statsData.piechart" class="chartView" />
+            </div>
+          </div>
+          <div class="dataValues">
+            <DataCards
+              cardHead="# Books Issued"
+              :cardValue="statsData.cardData.total_issued"
+            />
+            <DataCards
+              cardHead="# Requests Pending"
+              :cardValue="statsData.cardData.total_requests"
+            />
+            <DataCards
+              cardHead="Most Active Month"
+              :cardValue="statsData.cardData.most_active_month"
+            />
+            <DataCards
+              cardHead="# Books Rated"
+              :cardValue="statsData.cardData.total_ratings"
+            />
+            <DataCards
+              cardHead="# Days since Last Loged"
+              :cardValue="statsData.cardData.days_last_loged"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -121,19 +253,20 @@
 import axios from "axios";
 import BarChartView from "@/components/BarChartView.vue";
 import PieChartView from "@/components/PieChartView.vue";
+import DataCards from "@/components/DataCards.vue";
 import SideNav from "@/components/SideNav.vue";
 
 export default {
-  components: { SideNav, BarChartView, PieChartView },
+  components: { SideNav, BarChartView, PieChartView, DataCards },
   name: "MyBooksView",
   data() {
     return {
       changeMyBookView: 1,
+      gender: "male",
       myBooks: [],
       myHistory: [],
       searchBooks: [],
-      barChartData: [],
-      pieChartData: [],
+      statsData: [],
       user_id: "REPA0354",
     };
   },
@@ -185,8 +318,7 @@ export default {
       axios
         .get(`http://127.0.0.1:5000/get-statistics?user_id=${this.user_id}`)
         .then((response) => {
-          this.barChartData = response.data["barchart"];
-          this.pieChartData = response.data["piechart"];
+          this.statsData = response.data;
         })
         .catch(() => {
           this.$router.push("/error");
@@ -254,7 +386,7 @@ export default {
   height: max-content;
 }
 .myBooksHead {
-  margin: 0.5rem 1.4rem;
+  margin: 0.5rem 2.4rem;
   color: rgb(61, 61, 61);
   font-weight: 700;
 }
@@ -398,7 +530,7 @@ export default {
   display: flex;
   flex-direction: row;
   width: 100%;
-  height: 20rem;
+  height: 24rem;
 }
 .barChart {
   display: flex;
@@ -406,18 +538,215 @@ export default {
   align-items: center;
   width: 60%;
   height: 100%;
+  padding: 1rem 0rem;
+  position: relative;
+  z-index: 3;
+  /* background-color: white;
+  padding: 1rem 2rem; */
   /* background-color: #e6ac45; */
+}
+.barChart::before {
+  content: "Past 12 Months Activity";
+  padding-right: 1rem;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 1.5rem;
+  color: rgb(61, 61, 61);
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  top: 0;
+  left: auto;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  z-index: 4;
 }
 .pieChart {
   display: flex;
+  justify-content: center;
+  align-items: center;
   width: 40%;
   height: 100%;
+  padding: 1rem 0rem;
+  /* padding: ; */
   /* background-color: #e6ac45; */
+  position: relative;
+  z-index: 3;
+}
+.pieChart::before {
+  content: "Genres";
+  padding-right: 1rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: rgb(61, 61, 61);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  top: 0;
+  left: auto;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  z-index: 4;
 }
 .dataValues {
   display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 11rem;
+  margin-right: 1rem;
+}
+.d1profileContainer {
+  display: flex;
+  flex-direction: row;
+  /* justify-content: center; */
+  align-items: center;
+  width: 100%;
+  height: 20rem;
+}
+.d1profile {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 50%;
+  height: 80%;
+  margin: 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.d1ranking {
+  display: flex;
+  flex-direction: row;
+  width: 20%;
+  height: 80%;
+  margin: 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.d1rankingSubTop {
+  display: flex;
   flex-direction: column;
-  width: 40%;
+  width: 20%;
+  height: 80%;
+  margin: 0rem 1rem;
+}
+.d1rankingSubs {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* align-items: center; */
+  height: 48%;
+  width: 100%;
+  /* margin: 1rem; */
+  border-radius: 1rem;
+  /* box-shadow: 0 0.25rem 1rem #00000026; */
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.d1profilePicContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 10rem;
+  height: 10rem;
+  padding: 1rem;
+  margin: 1rem 2rem;
+  border-radius: 10rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  background-color: #ffffff;
+}
+.d1profilePic {
+  height: 80%;
+}
+.d1profileHead {
+  font-size: 2.8rem;
+  font-weight: 700;
+}
+.d1profileEmail {
+  font-size: 1rem;
+}
+.d1profileEmail span {
+  color: rgb(79, 79, 79);
+  margin-left: 0.3rem;
+}
+.d1ranking {
+  display: flex;
+  flex-direction: column;
+  /* justify-content: center; */
+  align-items: center;
+  padding: 1rem;
+}
+.leagueContainer {
+  display: flex;
+  height: 10rem;
+  width: 10rem;
+  padding: 1.2rem;
+  margin-top: 1.5rem;
+  border-radius: 10rem;
+  background-color: #111914;
+}
+.leagueLogo {
   height: 100%;
+  width: 100%;
+}
+.d1CardHeader {
+  font-size: 1rem;
+  font-weight: 600;
+  font-style: italic;
+  color: rgb(79, 79, 79);
+  padding: 0rem 1rem;
+}
+.objectives {
+  display: flex;
+  flex-direction: column;
+  /* justify-content: center; */
+  align-items: center;
+  height: max-content;
+  width: 100%;
+  margin-top: 1rem;
+}
+.objectiveNote {
+  display: flex;
+  flex-direction: row;
+  padding: 0rem 1rem;
+  /* justify-content: center; */
+  align-items: center;
+  width: 100%;
+  height: max-content;
+}
+.bulletContainer {
+  display: flex;
+  width: 10%;
+  height: max-content;
+  margin-right: 0.5rem;
+}
+.bullet {
+  height: 1rem;
+  width: auto;
+}
+.bulletPoint {
+  display: flex;
+  flex-wrap: wrap;
+}
+.scoreText {
+  font-size: 2rem;
+  font-weight: 700;
+  padding: 0rem 1rem;
+  padding-right: 0.5rem;
+  color: #e6ac45;
+}
+.scorePoint {
+  height: 1.8rem;
+  width: auto;
+  margin-left: 0.1rem;
 }
 </style>

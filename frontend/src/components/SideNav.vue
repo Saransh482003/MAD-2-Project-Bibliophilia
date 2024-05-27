@@ -69,7 +69,7 @@
         <div class="navBtnImgContainer">
           <img src="@/assets/images/stats_icon.png" alt="" class="navBtnImg" />
         </div>
-        <p class="navBtnsText">Statistics</p>
+        <p class="navBtnsText">Dashboard</p>
       </div>
       <div class="navBtns" @click="emitChangeMyBooksView(4)" id="nav4">
         <div class="navBtnImgContainer">

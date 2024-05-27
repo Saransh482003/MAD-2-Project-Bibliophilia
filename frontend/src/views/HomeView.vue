@@ -395,6 +395,14 @@ export default {
     this.fetchMyBooks();
     this.fetchBooks();
   },
+  watch: {
+    previewBook: {
+      handler(newVal, oldVal) {
+        console.log("Preview book changed:", newVal, oldVal);
+      },
+      deep: true,
+    },
+  },
   methods: {
     changeMiddleView(view) {
       this.changeView = view;
