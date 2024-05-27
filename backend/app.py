@@ -548,7 +548,47 @@ def getUserStatistics():
             "Congratulations!! on reaching the pinnacle."
         ]
     }
-    return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank,"next_criteria":next_criteria[rank]}, 200
+    next_points = {
+        "No":500,
+        "Reader":1750,
+        "Literati":5000,
+        "Scholar":13750,
+    }
+    return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank,"next_criteria":next_criteria[rank],"next_points":next_points[rank]}, 200
+
+@app.route("/get-feedbacks", methods=["GET"])
+def getUserFeedbacks():
+    user_id = request.args.to_dict()["user_id"]
+    fetchRating = requests.get(
+        f"http://127.0.0.1:5000/get-content/ratings?user_id={user_id}")
+    fetchRating = fetchRating.json()
+    fetchIssues = requests.get(
+        f"http://127.0.0.1:5000/get-content/issues?user_id={user_id}")
+    fetchIssues = fetchIssues.json()
+    ratings = set([i['book_id'] for i in fetchRating])
+    issues = set([i['book_id'] for i in fetchIssues])
+    notrated = list(issues.difference(ratings))
+    rated = list(ratings)
+    notRatedBooks = []
+    for i in notrated:
+        booker = requests.get(
+        f"http://127.0.0.1:5000/get-content/books?book_id={i}")
+        booker = booker.json()[0]
+        notRatedBooks.append(booker)
+    ratedBooks = []
+    for i in rated:
+        booker = requests.get(
+        f"http://127.0.0.1:5000/get-content/books?book_id={i}")
+        booker = booker.json()[0]
+        feedback = requests.get(
+        f"http://127.0.0.1:5000/get-content/ratings?book_id={i}&user_id={user_id}")
+        feedback = feedback.json()[0]
+
+        booker["rating"] = feedback["rating"]
+        booker["feedback"] = feedback["feedback"]
+        ratedBooks.append(booker)
+    return {"Not Rated":notRatedBooks,"Rated":ratedBooks}, 200
+
 
 
 # Data Insertion

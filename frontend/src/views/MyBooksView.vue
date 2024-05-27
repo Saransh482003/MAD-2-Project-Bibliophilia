@@ -208,6 +208,18 @@
                     alt="points"
                     class="scorePoint"
                   />
+                  <p
+                    class="scoreText nextPoint"
+                    v-if="statsData.rank != 'Sage'"
+                  >
+                    / {{ statsData.next_points }}
+                  </p>
+                  <img
+                    v-if="statsData.rank != 'Sage'"
+                    src="@/assets/images/points.png"
+                    alt="points"
+                    class="scorePoint nextPointImg"
+                  />
                 </div>
               </div>
             </div>
@@ -245,7 +257,89 @@
         </div>
       </div>
     </div>
-    <div class="mainPanel" v-if="changeMyBookView == 4">Feedbacks</div>
+    <div class="mainPanel" v-if="changeMyBookView == 4">
+      <div class="feedbackChamber">
+        <p class="myBooksHead feedbackHead">NOT RATED BOOKS</p>
+        <div
+          class="feedbackContainer"
+          v-for="(feedback, index) in feedbackBooks['Not Rated']"
+          :key="index"
+        >
+          <div class="fbookImgCont">
+            <img
+              :src="feedback.img"
+              :alt="feedback.book_name"
+              class="fbookImg"
+            />
+          </div>
+          <div class="fbookDetails">
+            <p class="fbookName">{{ feedback.book_name }}</p>
+            <p class="fbookRatingCont">
+              <img
+                v-for="i in 5"
+                :key="i"
+                src="@/assets/images/hollow star.png"
+                alt=""
+                class="fbookRating"
+              />
+            </p>
+            <textarea
+              name=""
+              class="feedbackArea"
+              cols="30"
+              rows="10"
+              placeholder="Enter Your Feedback Here"
+            ></textarea>
+            <div class="fsubmit">
+              <img
+                src="@/assets/images/tick-icon.png"
+                alt="Submit"
+                class="fsubmitIcon"
+              />
+              SUBMIT
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="feedbackChamber" style="margin-top: 2rem">
+        <p class="myBooksHead feedbackHead">RATED BOOKS</p>
+        <div
+          class="feedbackContainer"
+          v-for="(feedback, index) in feedbackBooks['Rated']"
+          :key="index"
+        >
+          <div class="fbookImgCont">
+            <img
+              :src="feedback.img"
+              :alt="feedback.book_name"
+              class="fbookImg"
+            />
+          </div>
+          <div class="fbookDetails">
+            <p class="fbookName">{{ feedback.book_name }}</p>
+            <div class="fbookRatingCont">
+              <img src="@/assets/images/star.png" alt="" class="fbookRating" />
+            </div>
+            <textarea
+              name=""
+              class="feedbackArea"
+              cols="30"
+              rows="10"
+              placeholder="Enter Your Feedback Here"
+              v-model="feedback.feedback"
+            ></textarea>
+            <div class="fsubmit">
+              <img
+                src="@/assets/images/edit-icon.png"
+                alt="Submit"
+                class="fsubmitIcon"
+              />
+              EDIT
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -267,6 +361,7 @@ export default {
       myHistory: [],
       searchBooks: [],
       statsData: [],
+      feedbackBooks: [],
       user_id: "REPA0354",
     };
   },
@@ -285,6 +380,8 @@ export default {
         this.searchBooks = [];
       } else if (view == 3) {
         this.fetchStatistics();
+      } else if (view == 4) {
+        this.fetchFeedbacks();
       }
     },
     fetchMyBooks() {
@@ -319,6 +416,16 @@ export default {
         .get(`http://127.0.0.1:5000/get-statistics?user_id=${this.user_id}`)
         .then((response) => {
           this.statsData = response.data;
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchFeedbacks() {
+      axios
+        .get(`http://127.0.0.1:5000/get-feedbacks?user_id=${this.user_id}`)
+        .then((response) => {
+          this.feedbackBooks = response.data;
         })
         .catch(() => {
           this.$router.push("/error");
@@ -634,7 +741,7 @@ export default {
 .d1rankingSubTop {
   display: flex;
   flex-direction: column;
-  width: 20%;
+  width: 22%;
   height: 80%;
   margin: 0rem 1rem;
 }
@@ -748,5 +855,108 @@ export default {
   height: 1.8rem;
   width: auto;
   margin-left: 0.1rem;
+}
+.nextPointImg {
+  filter: grayscale(100%) brightness(0.88);
+}
+.nextPoint {
+  color: #9c9c9a;
+}
+.feedbackChamber {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  height: max-content;
+  width: 100%;
+}
+.feedbackContainer {
+  display: flex;
+  flex-direction: row;
+  width: 47%;
+  height: 17.5rem;
+  margin: 1rem;
+  border-radius: 1rem;
+  background-color: white;
+  box-shadow: 0 0.25rem 1rem #00000026;
+}
+.fbookImgCont {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 30%;
+  height: 100%;
+  margin: 0rem 1rem;
+  overflow: hidden;
+}
+.fbookImg {
+  height: 100%;
+  width: auto;
+}
+.fbookDetails {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  width: 70%;
+  padding: 0.8rem 0rem;
+  padding-right: 0.8rem;
+}
+.fbookName {
+  font-size: 1.5rem;
+  font-weight: 700;
+  padding: 0.1rem 0rem;
+  max-height: 75px;
+}
+.fbookRatingCont {
+  display: flex;
+  height: 1.5rem;
+  width: 100%;
+  /* margin: 0.5rem 0rem; */
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.1rem 0rem;
+  color: rgb(61, 61, 61);
+}
+.fbookRating {
+  height: 100%;
+  width: auto;
+  margin-right: 0.3rem;
+  cursor: pointer;
+}
+.feedbackArea {
+  margin: 1rem 0rem;
+  margin-top: 0.8rem;
+  height: 5rem;
+  width: 100%;
+  resize: none;
+  padding: 0.5rem;
+  border-radius: 0.2rem;
+  outline: none;
+  border-color: #25352b;
+}
+.fsubmit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 8rem;
+  height: 2.5rem;
+  background-color: #25352b;
+  color: #e6ac45;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.fsubmit:hover {
+  background-color: #111914;
+}
+.fsubmitIcon {
+  height: 1rem;
+  width: auto;
+  margin-right: 0.3rem;
+}
+.feedbackHead {
+  width: 100%;
+  margin-left: 0rem;
+  margin-left: 1rem;
 }
 </style>
