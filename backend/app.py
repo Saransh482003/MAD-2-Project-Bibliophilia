@@ -38,7 +38,7 @@ def getBooks():
     if args != {}:
         fetcher = Books.query.filter_by(**args).all()
     else:
-        fetcher = Books.query.offset(start).limit(500).all()
+        fetcher = Books.query.offset(start).limit(200).all()
 
     if fetcher:
         books_list = []
@@ -580,6 +580,33 @@ def getUserFeedbacks():
         ratedBooks.append(booker)
     return {"Not Rated": notRatedBooks, "Rated": ratedBooks}, 200
 
+
+@app.route("/get-librarian/previewBook", methods=["GET"])
+def getLibrarianBooks():
+    book_id = request.args.to_dict()["book_id"]
+    booker = requests.get(
+            f"http://127.0.0.1:5000/get-content/books?book_id={book_id}")
+    booker = booker.json()[0]
+    issues = requests.get(
+            f"http://127.0.0.1:5000/get-content/issues?book_id={book_id}")
+    if issues.status_code==200:
+        issues = issues.json()
+    else:
+        issues = []
+    requester = requests.get(
+            f"http://127.0.0.1:5000/get-content/requests?book_id={book_id}")
+    if requester.status_code==200:
+        requester = requester.json()
+    else:
+        requester = []
+    rater = requests.get(
+            f"http://127.0.0.1:5000/get-content/ratings?book_id={book_id}")
+    if rater.status_code==200:
+        rater = [float(i['rating']) for i in rater.json()]
+    else:
+        rater = []
+    print(booker)
+    return {"book":booker, "issues":len(issues), "requests":len(requester), "avg_rating":sum(rater)/len(rater) if len(rater)!=0 else 0}
 
 # Data Insertion
 @app.route("/push-content/books", methods=["GET", "POST"])

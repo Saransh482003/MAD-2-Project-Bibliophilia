@@ -1,5 +1,5 @@
 <template>
-  <div class="footer">
+  <div class="navbar">
     <router-link to="/" class="logo">
       <div class="logoContainer">
         <img
@@ -10,29 +10,40 @@
       </div>
       <p class="logoText">Bibliophilia</p>
     </router-link>
-    <div class="footerContent">Copyright © 2024 bibliophilia.com</div>
+    <div class="navLinks">
+      <router-link to="/librarian" class="link">Dashboard</router-link>
+      <router-link to="/logout" class="link">Logout</router-link>
+      <div class="profile">
+        <img
+          src="@/assets/images/librarian.png"
+          alt="username"
+          class="profilePic"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 export default {
-  name: "AppFooter",
+  name: "LibrarianNavbar",
 };
 </script>
 
 <style scoped>
-.footer {
+.navbar {
   display: flex;
   flex-direction: row;
   justify-content: center;
   align-items: center;
   width: 100%;
   height: 5.5rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
 }
 .logo {
   display: flex;
   align-items: center;
-  width: 23%;
+  width: 25%;
 }
 .logoContainer {
   display: flex;
@@ -56,14 +67,12 @@ export default {
   font-weight: 900;
   color: #25352b;
 }
-.footerContent {
+.navLinks {
   display: flex;
-  justify-content: start;
+  justify-content: end;
   align-items: center;
   width: 80%;
-  height: 65%;
-  padding-left: 2rem;
-  border-left: 2px rgb(112, 112, 112) solid;
+  height: 100%;
 }
 .profile {
   display: flex;
@@ -74,10 +83,27 @@ export default {
   margin: 0rem 1rem;
   background-color: white;
   border-radius: 40rem;
+  cursor: pointer;
   box-shadow: 0 0.25rem 1rem #00000026;
+}
+.profile:hover .profilePic {
+  height: 73%;
+  width: 73%;
 }
 .profilePic {
   height: 65%;
   width: 65%;
+  transition: all 0.2s ease;
+}
+.link {
+  font-size: 1.2rem;
+  margin: 0rem 1.5rem;
+  text-decoration: none;
+  color: black;
+  transition: all 0.1s ease;
+}
+.link:hover {
+  padding-bottom: 5px;
+  border-bottom: 3px solid #25352b;
 }
 </style>

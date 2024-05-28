@@ -1,8 +1,8 @@
 <template>
   <div id="app">
-    <AppNavbar gender="male" />
+    <AppNavbar gender="male" v-if="$route.name !== 'librarian'" />
+    <LibrarianNavbar v-else />
     <router-view />
-    <!-- <AppFooter /> -->
   </div>
 </template>
 
@@ -40,12 +40,12 @@
 
 <script>
 import AppNavbar from "./components/AppNavbar.vue";
-// import AppFooter from "./components/AppFooter.vue";
+import LibrarianNavbar from "./components/LibrarianNavbar.vue";
 export default {
   name: "App",
   components: {
     AppNavbar,
-    // AppFooter,
+    LibrarianNavbar,
   },
 };
 </script>
