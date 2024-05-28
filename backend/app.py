@@ -4,7 +4,9 @@ from flask_cors import CORS
 from models import *
 import random
 import requests
+import math
 from datetime import date, datetime
+from dateutil import parser
 
 app = Flask(__name__)
 
@@ -386,45 +388,33 @@ def searchMyBooks():
 def myBooks():
     args = request.args.to_dict()
     user_id = args['user_id']
-    request_type = ""
-    if "all" in args:
-        request_type = args['all']
-    fetcher = Issues.query.filter_by(user_id=user_id).limit(500).all()
+
+    roger = f"http://127.0.0.1:5000/get-content/issues?user_id={user_id}"
+    fetcher = requests.get(roger).json()[::-1]
+
     today_date = datetime.now()
-    if fetcher:
-        books_list = []
-        if request_type == "true":
-            for book in fetcher:
-                bookDetails = Books.query.filter_by(
-                    book_id=book.book_id).first()
-                books_list.append({
-                    "book_id": bookDetails.book_id,
-                    "book_name": bookDetails.book_name,
-                    "img": bookDetails.img,
-                    "author_id": bookDetails.author_id,
-                    "author_name": bookDetails.author_name,
-                    "request_date": book.request_date.strftime('%d %b %Y'),
-                    "doi": book.doi.strftime('%d %b %Y'),
-                    "dor": book.dor.strftime('%d %b %Y'),
-                })
+    books_list = {"Current": [], "History": []}
+    for issue in fetcher:
+        bookDetails = f"http://127.0.0.1:5000/get-content/books?book_id={issue['book_id']}"
+        fetcherBooks = requests.get(bookDetails).json()[0]
+        request_date = parser.parse(issue["request_date"])
+        doi = parser.parse(issue["doi"][:-3])
+        dor = parser.parse(issue["dor"][:-3])
+        finalResponse = {
+            "book_id": fetcherBooks["book_id"],
+            "book_name": fetcherBooks["book_name"],
+            "img": fetcherBooks["img"],
+            "author_id": fetcherBooks["author_id"],
+            "author_name": fetcherBooks["author_name"],
+            "request_date": request_date.strftime("%d %b %Y"),
+            "doi": doi.strftime("%d %b %Y"),
+            "dor": dor.strftime("%d %b %Y"),
+        }
+        if today_date < dor:
+            books_list["Current"].append(finalResponse)
         else:
-            for book in fetcher:
-                if today_date < book.dor:
-                    bookDetails = Books.query.filter_by(
-                        book_id=book.book_id).first()
-                    books_list.append({
-                        "book_id": bookDetails.book_id,
-                        "book_name": bookDetails.book_name,
-                        "img": bookDetails.img,
-                        "author_id": bookDetails.author_id,
-                        "author_name": bookDetails.author_name,
-                        "request_date": book.request_date.strftime('%d %b %Y'),
-                        "doi": book.doi.strftime('%d %b %Y'),
-                        "dor": book.dor.strftime('%d %b %Y'),
-                    })
-        return books_list, 200
-    else:
-        abort(404)
+            books_list["History"].append(finalResponse)
+    return books_list, 200
 
 
 @app.route("/get-content/randomBooks", methods=["GET"])
@@ -529,32 +519,33 @@ def getUserStatistics():
     # score = score*0
     rank = "Sage" if score >= 13750 else "Scholar" if score >= 5000 else "Literati" if score >= 1750 else "Reader" if score >= 500 else "No"
     next_criteria = {
-        "No":[
+        "No": [
             "Read 5 Books"
         ],
-        "Reader":[
+        "Reader": [
             "Read 10 Books",
             "Review 3 Books",
         ],
-        "Literati":[
+        "Literati": [
             "Read 25 Books",
             "Review 10 Books",
         ],
-        "Scholar":[
+        "Scholar": [
             "Read 75 Books",
             "Review 25 Books",
         ],
-        "Sage":[
+        "Sage": [
             "Congratulations!! on reaching the pinnacle."
         ]
     }
     next_points = {
-        "No":500,
-        "Reader":1750,
-        "Literati":5000,
-        "Scholar":13750,
+        "No": 500,
+        "Reader": 1750,
+        "Literati": 5000,
+        "Scholar": 13750,
     }
-    return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank,"next_criteria":next_criteria[rank],"next_points":next_points[rank]}, 200
+    return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank]}, 200
+
 
 @app.route("/get-feedbacks", methods=["GET"])
 def getUserFeedbacks():
@@ -572,23 +563,22 @@ def getUserFeedbacks():
     notRatedBooks = []
     for i in notrated:
         booker = requests.get(
-        f"http://127.0.0.1:5000/get-content/books?book_id={i}")
+            f"http://127.0.0.1:5000/get-content/books?book_id={i}")
         booker = booker.json()[0]
         notRatedBooks.append(booker)
     ratedBooks = []
     for i in rated:
         booker = requests.get(
-        f"http://127.0.0.1:5000/get-content/books?book_id={i}")
+            f"http://127.0.0.1:5000/get-content/books?book_id={i}")
         booker = booker.json()[0]
         feedback = requests.get(
-        f"http://127.0.0.1:5000/get-content/ratings?book_id={i}&user_id={user_id}")
+            f"http://127.0.0.1:5000/get-content/ratings?book_id={i}&user_id={user_id}")
         feedback = feedback.json()[0]
 
-        booker["rating"] = feedback["rating"]
+        booker["rating"] = math.ceil(float(feedback["rating"]))
         booker["feedback"] = feedback["feedback"]
         ratedBooks.append(booker)
-    return {"Not Rated":notRatedBooks,"Rated":ratedBooks}, 200
-
+    return {"Not Rated": notRatedBooks, "Rated": ratedBooks}, 200
 
 
 # Data Insertion

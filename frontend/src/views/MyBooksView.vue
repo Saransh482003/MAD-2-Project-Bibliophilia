@@ -260,84 +260,21 @@
     <div class="mainPanel" v-if="changeMyBookView == 4">
       <div class="feedbackChamber">
         <p class="myBooksHead feedbackHead">NOT RATED BOOKS</p>
-        <div
-          class="feedbackContainer"
+        <NotFeedbackCards
           v-for="(feedback, index) in feedbackBooks['Not Rated']"
-          :key="index"
-        >
-          <div class="fbookImgCont">
-            <img
-              :src="feedback.img"
-              :alt="feedback.book_name"
-              class="fbookImg"
-            />
-          </div>
-          <div class="fbookDetails">
-            <p class="fbookName">{{ feedback.book_name }}</p>
-            <p class="fbookRatingCont">
-              <img
-                v-for="i in 5"
-                :key="i"
-                src="@/assets/images/hollow star.png"
-                alt=""
-                class="fbookRating"
-              />
-            </p>
-            <textarea
-              name=""
-              class="feedbackArea"
-              cols="30"
-              rows="10"
-              placeholder="Enter Your Feedback Here"
-            ></textarea>
-            <div class="fsubmit">
-              <img
-                src="@/assets/images/tick-icon.png"
-                alt="Submit"
-                class="fsubmitIcon"
-              />
-              SUBMIT
-            </div>
-          </div>
-        </div>
+          :key="`NotRated${index}`"
+          :bookDetails="feedback"
+          :user_id="user_id"
+        />
       </div>
       <div class="feedbackChamber" style="margin-top: 2rem">
         <p class="myBooksHead feedbackHead">RATED BOOKS</p>
-        <div
-          class="feedbackContainer"
+        <FeedbackCards
           v-for="(feedback, index) in feedbackBooks['Rated']"
-          :key="index"
-        >
-          <div class="fbookImgCont">
-            <img
-              :src="feedback.img"
-              :alt="feedback.book_name"
-              class="fbookImg"
-            />
-          </div>
-          <div class="fbookDetails">
-            <p class="fbookName">{{ feedback.book_name }}</p>
-            <div class="fbookRatingCont">
-              <img src="@/assets/images/star.png" alt="" class="fbookRating" />
-            </div>
-            <textarea
-              name=""
-              class="feedbackArea"
-              cols="30"
-              rows="10"
-              placeholder="Enter Your Feedback Here"
-              v-model="feedback.feedback"
-            ></textarea>
-            <div class="fsubmit">
-              <img
-                src="@/assets/images/edit-icon.png"
-                alt="Submit"
-                class="fsubmitIcon"
-              />
-              EDIT
-            </div>
-          </div>
-        </div>
+          :key="`Rated${index}`"
+          :bookDetails="feedback"
+          :user_id="user_id"
+        />
       </div>
     </div>
   </div>
@@ -349,9 +286,18 @@ import BarChartView from "@/components/BarChartView.vue";
 import PieChartView from "@/components/PieChartView.vue";
 import DataCards from "@/components/DataCards.vue";
 import SideNav from "@/components/SideNav.vue";
+import NotFeedbackCards from "@/components/NotFeedbackCards.vue";
+import FeedbackCards from "@/components/FeedbackCards.vue";
 
 export default {
-  components: { SideNav, BarChartView, PieChartView, DataCards },
+  components: {
+    SideNav,
+    BarChartView,
+    PieChartView,
+    DataCards,
+    NotFeedbackCards,
+    FeedbackCards,
+  },
   name: "MyBooksView",
   data() {
     return {
@@ -362,13 +308,13 @@ export default {
       searchBooks: [],
       statsData: [],
       feedbackBooks: [],
+      hoveredStar: 0,
       user_id: "REPA0354",
     };
   },
   created() {
     this.changeMyBookView = 1;
     this.fetchMyBooks();
-    this.fetchMyHistory();
   },
   methods: {
     changeMiddleView(view) {
@@ -390,21 +336,8 @@ export default {
           `http://127.0.0.1:5000/get-content/myBooks?user_id=${this.user_id}`
         )
         .then((response) => {
-          this.myBooks = response.data;
-
-          // this.changePreviewBook(this.myBooks[0].book_id);
-        })
-        .catch(() => {
-          this.$router.push("/error");
-        });
-    },
-    fetchMyHistory() {
-      axios
-        .get(
-          `http://127.0.0.1:5000/get-content/myBooks?user_id=${this.user_id}&all=true`
-        )
-        .then((response) => {
-          this.myHistory = response.data;
+          this.myBooks = response.data["Current"];
+          this.myHistory = response.data["History"];
           // this.changePreviewBook(this.myBooks[0].book_id);
         })
         .catch(() => {
@@ -431,6 +364,28 @@ export default {
           this.$router.push("/error");
         });
     },
+    starHover(index, starNum) {
+      const parent = this.$refs[`item-${index}`][0];
+      for (let i = 1; i <= starNum; i++) {
+        const star = parent.querySelector(`#star${index}-${i}`);
+        star.src = require("@/assets/images/star.png");
+      }
+    },
+    resetStars(index) {
+      const parent = this.$refs[`item-${index}`][0];
+      for (let i = 1; i <= 5; i++) {
+        const star = parent.querySelector(`#star${index}-${i}`);
+        star.src = require("@/assets/images/hollow star.png");
+      }
+    },
+    selectStar(index, starNum) {
+      const parent = this.$refs[`item-${index}`][0];
+      for (let i = 1; i <= starNum; i++) {
+        const star = parent.querySelector(`#star${index}-${i}`);
+        star.src = require("@/assets/images/star.png");
+      }
+    },
+
     bookSearcher() {
       let keyword = document.getElementById("searchbox").value;
       axios
@@ -456,8 +411,24 @@ export default {
     readBook(book_id) {
       console.log(`Reading ${book_id}`);
     },
-    returnBook(book_id) {
-      console.log(`Returning ${book_id}`);
+    async returnBook(book_id) {
+      const today = new Date();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/issues",
+          {
+            book_id: book_id,
+            user_id: this.user_id,
+            dor: today,
+          }
+        );
+        console.log("Success:", response.data);
+        window.location.reload();
+      } catch (error) {
+        alert(
+          "Unable to submit the feedback. Kindly try again or contact the librarian."
+        );
+      }
     },
   },
 };
@@ -920,7 +891,7 @@ export default {
 .fbookRating {
   height: 100%;
   width: auto;
-  margin-right: 0.3rem;
+  padding-right: 0.3rem;
   cursor: pointer;
 }
 .feedbackArea {

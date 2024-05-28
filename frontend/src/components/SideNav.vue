@@ -82,6 +82,66 @@
         <p class="navBtnsText">Feedbacks</p>
       </div>
     </div>
+    <div class="sideNavInner" v-else-if="page == 'librarian'">
+      <div class="navBtns" @click="emitChangeLibrarianView(2)" id="nav2">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/search_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Search</p>
+      </div>
+      <div class="navBtns" @click="emitChangeLibrarianView(1)" id="nav1">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/stats_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Dashboard</p>
+      </div>
+      <div class="navBtns" @click="emitChangeLibrarianView(3)" id="nav3">
+        <div class="navBtnImgContainer">
+          <img
+            src="@/assets/images/important_icon.png"
+            alt=""
+            class="navBtnImg"
+          />
+        </div>
+        <p class="navBtnsText">Issue Requests</p>
+      </div>
+      <div class="navBtns" @click="emitChangeLibrarianView(4)" id="nav4">
+        <div class="navBtnImgContainer">
+          <img
+            src="@/assets/images/current_issue.png"
+            alt=""
+            class="navBtnImg"
+          />
+        </div>
+        <p class="navBtnsText">Issue Logs</p>
+      </div>
+      <div class="navBtns" @click="emitChangeLibrarianView(5)" id="nav5">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/books_icon.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Book Management</p>
+      </div>
+      <div class="navBtns" @click="emitChangeLibrarianView(6)" id="nav6">
+        <div class="navBtnImgContainer">
+          <img
+            src="@/assets/images/section_icon.png"
+            alt=""
+            class="navBtnImg"
+          />
+        </div>
+        <p class="navBtnsText">Section Management</p>
+      </div>
+      <div class="navBtns" @click="emitChangeLibrarianView(7)" id="nav7">
+        <div class="navBtnImgContainer">
+          <img
+            src="@/assets/images/user_manage_icon.png"
+            alt=""
+            class="navBtnImg"
+          />
+        </div>
+        <p class="navBtnsText">User Management</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -109,6 +169,17 @@ export default {
     },
     emitChangeMyBooksView(view) {
       this.$emit("changeMyBookView", view);
+
+      let navs = document.getElementsByClassName("navBtns");
+      Array.from(navs).forEach((element) => {
+        element.classList.remove("selected");
+      });
+
+      let nav = document.getElementById(`nav${view}`);
+      nav.classList.add("selected");
+    },
+    emitChangeLibrarianView(view) {
+      this.$emit("changeLibrarianView", view);
 
       let navs = document.getElementsByClassName("navBtns");
       Array.from(navs).forEach((element) => {

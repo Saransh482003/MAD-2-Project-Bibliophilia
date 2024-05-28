@@ -493,7 +493,7 @@ export default {
           `http://127.0.0.1:5000/get-content/myBooks?user_id=${this.user_id}`
         )
         .then((response) => {
-          this.myBooks = response.data;
+          this.myBooks = response.data["Current"];
           // this.changePreviewBook(this.myBooks[0].book_id);
         })
         .catch(() => {
