@@ -7,6 +7,10 @@
     <div class="mainPanel" v-if="changeView == 3">Issue Requests</div>
     <div class="mainPanel" v-if="changeView == 4">Issue Logs</div>
     <div class="mainPanel withPreview" v-if="changeView == 5">
+      <div class="headBookTitleContainer">
+        <div class="headBookTitle">Book Management</div>
+        <div class="addNewBook" @click="createBook()">Add Book</div>
+      </div>
       <div v-for="(book, index) in books" :key="index" class="card myCard">
         <div class="bookImgContainer">
           <img :src="book.img" alt="" class="bookImg" />
@@ -21,7 +25,10 @@
           </p>
         </div>
         <div class="actions">
-          <div class="actionBtns" @click="readBook(book.book_id)">
+          <div
+            class="actionBtns"
+            @click="confirmDelete(book.book_id, book.book_name)"
+          >
             <img
               src="@/assets/images/delete-icon.png"
               alt=""
@@ -43,30 +50,164 @@
         </div>
       </div>
     </div>
-    <div class="previewPanel" v-if="changeView == 5">
+    <div class="previewPanel" v-if="changeView == 5 && !addBookPallet">
       <div class="previewDetailsContainer">
         <div class="previewImgContainer">
           <img :src="previewBook.book.img" alt="" class="imgContainer" />
         </div>
-        <p class="previewTitle">{{ previewBook.book.book_name }}</p>
+        <div class="titleDiv" v-if="!isTitleEdit">
+          <p class="previewTitle">
+            {{ previewBook.book.book_name }}
+          </p>
+          <img
+            src="@/assets/images/edit-icon.png"
+            alt=""
+            class="editActions"
+            @click="editTitle()"
+          />
+        </div>
+
+        <div class="previewTitleEdit" v-else>
+          <input
+            v-model="titleNew"
+            @keyup.enter="isTitleEdit = false"
+            @blur="handleTitleBlur"
+            ref="titleInput"
+          />
+          <img
+            src="@/assets/images/tick-icon.png"
+            alt="Edit Title"
+            title="Edit Title"
+            class="editActions"
+            @mousedown.prevent="saveTitle"
+          />
+        </div>
 
         <div class="majorDetails">
-          <p>
+          <p v-if="!isAuthorEdit">
             AUTHOR: <span>{{ previewBook.book.author_name }}</span>
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt="Edit Author"
+              title="Edit Author"
+              class="editActions"
+              @click="editAuthor()"
+            />
           </p>
-          <p>
+          <div class="editable" v-else>
+            AUTHOR:
+            <input
+              v-model="authorNew"
+              @keyup.enter="isAuthorEdit = false"
+              @blur="handleAuthorBlur"
+              ref="authorInput"
+            />
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt="Edit Author"
+              title="Edit Author"
+              class="editActions"
+              @mousedown.prevent="saveAuthor"
+            />
+          </div>
+          <p v-if="!isGenreEdit">
             GENRE: <span>{{ previewBook.book.genre }}</span>
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @click="editGenre()"
+            />
           </p>
+          <div class="editable" v-else>
+            GENRE:
+            <input
+              v-model="genreNew"
+              @keyup.enter="isGenreEdit = false"
+              @blur="handleGenreBlur"
+              ref="genreInput"
+            />
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @mousedown.prevent="saveGenre"
+            />
+          </div>
+
+          <p>DESCRIPTION:</p>
           <p>
-            DESCRIPTION:<br />
-            <span
+            <span style="margin-left: 0rem"
               >Lorem ipsum dolor sit amet consectetur adipisicing elit.
               Cupiditate repellendus quae similique natus in blanditiis
               doloribus facer?</span
             >
           </p>
         </div>
-        <div class="bookStats"></div>
+        <div class="bookStats">
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ previewBook.issues }}</div>
+            <p class="bookStatTitle"># Issues</p>
+          </div>
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ previewBook.requests }}</div>
+            <p class="bookStatTitle"># Requests</p>
+          </div>
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ previewBook.avg_rating }}</div>
+            <p class="bookStatTitle">Avg. Rating</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="previewPanel" v-if="changeView == 5 && addBookPallet">
+      <p class="previewTitle">Add New Book</p>
+      <div class="previewDetailsContainer">
+        <div class="createNewEntry">
+          BOOK COVER URL:
+          <input v-model="createBookImg" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          TITLE:
+          <input v-model="createBookName" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          AUTHOR NAME:
+          <input v-model="createBookAuthor" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          SECTION NAME:
+          <select
+            name="cars"
+            ref="sectionDrop"
+            class="createNewEntryDropDown"
+            v-model="selectedSection"
+            @change="getGenres()"
+          >
+            <option
+              v-for="(dropOption, dropIndex) in sections"
+              :key="dropIndex"
+              :value="dropOption.section_id"
+            >
+              {{ dropOption.section_name }}
+            </option>
+          </select>
+        </div>
+        <div class="createNewEntry">
+          GENRE:
+          <select name="cars" ref="genreDrop" class="createNewEntryDropDown">
+            <option
+              v-for="(dropOption, dropIndex) in dropGenre"
+              :key="dropIndex"
+              :value="dropOption"
+            >
+              {{ dropOption }}
+            </option>
+          </select>
+        </div>
+        <div class="submitNew">SUBMIT</div>
       </div>
     </div>
     <div class="mainPanel" v-if="changeView == 6">Section Management</div>
@@ -87,8 +228,17 @@ export default {
       sections: [],
       authors: [],
       genres: [],
+      selectedSection: null,
+      dropGenre: [],
       previewBook: {},
       changeView: 1,
+      isTitleEdit: false,
+      isAuthorEdit: false,
+      isGenreEdit: false,
+      titleNew: "",
+      genreNew: "",
+      authorNew: "",
+      addBookPallet: true,
     };
   },
   created() {
@@ -112,6 +262,141 @@ export default {
           this.$router.push("/error");
         });
     },
+    createBook() {
+      this.addBookPallet = true;
+      axios
+        .get("http://127.0.0.1:5000/get-content/sections")
+        .then((response) => {
+          this.sections = response.data;
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    getGenres() {
+      console.log(this.selectedSection);
+      axios
+        .get(
+          `http://127.0.0.1:5000/get-content/books?section_id=${this.selectedSection}`
+        )
+        .then((response) => {
+          let genres = response.data.forEach((element) => {
+            element.genre;
+          });
+          console.log(genres);
+          this.dropGenre = [...new Set(genres)];
+          console.log(this.dropGenre);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    editTitle() {
+      this.titleNew = this.previewBook.book.book_name;
+      this.isTitleEdit = true;
+    },
+    handleTitleBlur(event) {
+      if (this.$refs.titleInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isTitleEdit = false;
+    },
+    async saveTitle(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/books",
+          {
+            book_id: this.previewBook.book.book_id,
+            book_name: this.titleNew,
+          }
+        );
+        this.previewBook.book.book_name = this.titleNew;
+        this.isTitleEdit = false;
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to edit the Title. Kindly try again.");
+      }
+    },
+    editGenre() {
+      this.genreNew = this.previewBook.book.genre;
+      this.isGenreEdit = true;
+    },
+    handleGenreBlur(event) {
+      if (this.$refs.genreInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isGenreEdit = false;
+    },
+    async saveGenre(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/books",
+          {
+            book_id: this.previewBook.book.book_id,
+            genre: this.genreNew,
+          }
+        );
+        this.previewBook.book.genre = this.genreNew;
+        this.isGenreEdit = false;
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to edit the Genre. Kindly try again.");
+      }
+    },
+    editAuthor() {
+      this.authorNew = this.previewBook.book.author_name;
+      this.isAuthorEdit = true;
+    },
+    handleAuthorBlur(event) {
+      if (this.$refs.authorInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isAuthorEdit = false;
+    },
+    async saveAuthor(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/books",
+          {
+            book_id: this.previewBook.book.book_id,
+            author_name: this.authorNew,
+          }
+        );
+        const responseAuthor = await axios.put(
+          "http://127.0.0.1:5000/put-content/authors",
+          {
+            author_id: this.previewBook.book.author_id,
+            author_name: this.authorNew,
+          }
+        );
+        this.previewBook.book.author_name = this.authorNew;
+        this.isAuthorEdit = false;
+        console.log("Success:", response.data, responseAuthor.data);
+      } catch (error) {
+        alert("Unable to edit the Author Name. Kindly try again.");
+      }
+    },
+    async deleteBook(book_id) {
+      try {
+        const response = await axios.delete(
+          `http://127.0.0.1:5000/delete-content/books?book_id=${book_id}`
+        );
+        console.log("Success:", response.data);
+        window.location.reload();
+      } catch (error) {
+        alert("Unable to Delete the book. Kindly try again.");
+      }
+    },
+    confirmDelete(book_id, book_name) {
+      if (
+        confirm(`Are you sure you want to delete this book : ${book_name}?`)
+      ) {
+        this.deleteBook(book_id, book_name);
+      }
+    },
     changePreviewBook(book_id) {
       axios
         .get(
@@ -131,27 +416,6 @@ export default {
       } else {
         return text;
       }
-    },
-    formatDateToDDMMYYYY(timestamp) {
-      const date = new Date(timestamp);
-      const day = String(date.getDate()).padStart(2, "0");
-      const monthNames = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
-      const month = monthNames[date.getMonth()];
-      const year = date.getFullYear();
-      return `${day} ${month} ${year}`;
     },
   },
 };
@@ -200,7 +464,7 @@ export default {
   flex-wrap: wrap;
   justify-content: center;
   width: 100%;
-  height: 91%;
+  height: 100%;
   padding: 1rem 1.5rem;
   overflow: hidden;
   overflow-y: scroll;
@@ -298,47 +562,28 @@ export default {
   width: 100%;
   position: relative;
 }
-.downloadPDFContainer {
-  position: absolute;
-  width: 100%;
-  height: 100%;
+.editable {
   display: flex;
-  justify-content: center;
-  align-items: end;
-  z-index: 1;
-}
-.downloadPDF {
-  display: flex;
-  height: 2rem;
-  width: 2rem;
-  padding: 0.4rem;
-  border-radius: 30rem;
-  margin-bottom: 0.8rem;
-  background-color: white;
-  position: relative;
-  cursor: pointer;
-  box-shadow: 0 0.25rem 1rem #00000026;
-  z-index: 2;
-  transition: all 0.2s ease;
-}
-.downloadPDF:hover {
-  background-color: #25352b;
-}
-.downloadPDF:hover .pdfIcon {
-  filter: none;
-}
-.pdfIcon {
-  width: 100%;
-  height: 100%;
-  filter: grayscale(100%) brightness(0);
 }
 .imgContainer {
   height: 100%;
   width: auto;
 }
 .previewTitle {
+  display: flex;
+  align-items: center;
   margin-top: 1rem;
   line-height: 20px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0.2rem 0rem;
+}
+.previewTitle img {
+  height: 1.2rem;
+  width: auto;
+  margin-left: 0.3rem;
+  cursor: pointer;
+  filter: grayscale(100%) brightness(0.2);
 }
 .majorDetails {
   height: max-content;
@@ -346,20 +591,206 @@ export default {
   margin: 1rem 0rem;
 }
 .majorDetails p {
-  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
   font-weight: 600;
   color: rgb(61, 61, 61);
   letter-spacing: 1px;
 }
+.majorDetails div {
+  display: flex;
+  align-items: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgb(61, 61, 61);
+  letter-spacing: 1px;
+}
+.majorDetails p > img {
+  height: 1rem;
+  width: auto;
+  margin-left: 0.3rem;
+  cursor: pointer;
+  filter: grayscale(100%) brightness(0.2);
+}
+.majorDetails div > img {
+  height: 1rem;
+  width: auto;
+  margin-left: 0.3rem;
+  cursor: pointer;
+  filter: grayscale(100%) brightness(0.2);
+}
 .majorDetails span {
   font-weight: 500;
   letter-spacing: 0rem;
+  margin-left: 0.3rem;
+}
+.majorDetails input {
+  font-weight: 500;
+  margin-left: 0.3rem;
+  padding: 0rem 0.2rem;
+  border-radius: 0.2rem;
+  outline: none;
+  border: 1px solid rgb(61, 61, 61);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: rgb(61, 61, 61);
 }
 .bookStats {
   display: flex;
   flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
+  margin: 1rem 0rem;
+  height: max-content;
+}
+.previewTitleEdit {
+  display: flex;
+  align-items: center;
+  margin-top: 1rem;
+  line-height: 20px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0.2rem 0rem;
+}
+.previewTitleEdit input {
+  font-weight: 600;
+  padding: 0rem 0.2rem;
+  border-radius: 0.2rem;
+  outline: none;
+  border: 1px solid rgb(61, 61, 61);
+  font-size: 1rem;
+  color: rgb(61, 61, 61);
+}
+.previewTitleEdit img {
+  height: 1rem;
+  width: auto;
+  margin-left: 0.3rem;
+  cursor: pointer;
+  filter: grayscale(100%) brightness(0.2);
+}
+.bookStatOption {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 5rem;
+  width: 30%;
+  margin: 0rem 0.5rem;
+}
+.bookStatData {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   height: 3rem;
-  background-color: aqua;
+  width: 3rem;
+  margin: 0.5rem;
+  background-color: white;
+  border-radius: 10rem;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  color: #e6ac45;
+  background-color: #25352b;
+}
+.bookStatTitle {
+  height: 1rem;
+  width: 100%;
+  font-size: 0.7rem;
+  text-align: center;
+}
+.titleDiv {
+  display: flex;
+  align-items: center;
+}
+.titleDiv p {
+  max-width: 90%;
+  width: max-content;
+}
+.titleDiv img {
+  height: 1rem;
+  width: auto;
+  margin-top: 1rem;
+  margin-left: 0.3rem;
+  filter: grayscale(100%) brightness(0);
+}
+.headBookTitleContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 5rem;
+  margin-left: 1.4rem;
+}
+.headBookTitle {
+  display: flex;
+  width: 80%;
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+}
+.addNewBook {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 20%;
+  height: 2.5rem;
+  margin: 0rem 1.4rem;
+  font-weight: 600;
+  background-color: white;
+  color: #e6ac45;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+}
+.addNewBook:hover {
+  background-color: #25352b;
+  color: #e6ac45;
+}
+.createNewEntry {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.5rem;
+  width: 100%;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+.createNewEntryInput {
+  font-weight: 500;
+  padding: 0.2rem 0.2rem;
+  border-radius: 0.2rem;
+  outline: none;
+  border: 1px solid rgb(61, 61, 61);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: rgb(61, 61, 61);
+}
+.submitNew {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  background-color: #25352b;
+  color: #e6ac45;
+  padding: 0.5rem;
+  margin-top: 1rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.submitNew:hover {
+  background-color: #111914;
+}
+.createNewEntryDropDown {
+  padding: 0.2rem 0.2rem;
+  border-radius: 0.2rem;
+  outline: none;
 }
 </style>

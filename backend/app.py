@@ -605,7 +605,6 @@ def getLibrarianBooks():
         rater = [float(i['rating']) for i in rater.json()]
     else:
         rater = []
-    print(booker)
     return {"book":booker, "issues":len(issues), "requests":len(requester), "avg_rating":sum(rater)/len(rater) if len(rater)!=0 else 0}
 
 # Data Insertion
