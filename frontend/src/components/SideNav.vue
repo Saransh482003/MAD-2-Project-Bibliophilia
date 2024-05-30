@@ -117,14 +117,18 @@
       </div>
       <div class="navBtns" @click="emitChangeLibrarianView(5)" id="nav5">
         <div class="navBtnImgContainer">
-          <img src="@/assets/images/books_icon.png" alt="" class="navBtnImg" />
+          <img
+            src="@/assets/images/books_managament_icon.png"
+            alt=""
+            class="navBtnImg"
+          />
         </div>
         <p class="navBtnsText">Book Management</p>
       </div>
       <div class="navBtns" @click="emitChangeLibrarianView(6)" id="nav6">
         <div class="navBtnImgContainer">
           <img
-            src="@/assets/images/section_icon.png"
+            src="@/assets/images/section_management_icon.png"
             alt=""
             class="navBtnImg"
           />
@@ -134,7 +138,17 @@
       <div class="navBtns" @click="emitChangeLibrarianView(7)" id="nav7">
         <div class="navBtnImgContainer">
           <img
-            src="@/assets/images/user_manage_icon.png"
+            src="@/assets/images/author_management_icon.png"
+            alt=""
+            class="navBtnImg"
+          />
+        </div>
+        <p class="navBtnsText">Author Management</p>
+      </div>
+      <div class="navBtns" @click="emitChangeLibrarianView(8)" id="nav8">
+        <div class="navBtnImgContainer">
+          <img
+            src="@/assets/images/user_management_icon.png"
             alt=""
             class="navBtnImg"
           />

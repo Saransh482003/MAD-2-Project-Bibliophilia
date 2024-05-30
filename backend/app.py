@@ -36,7 +36,7 @@ def getBooks():
     start = request.args.get('start', 0, type=int)
 
     if args != {}:
-        fetcher = Books.query.filter_by(**args).all()
+        fetcher = Books.query.filter_by(**args).limit(500).all()
     else:
         fetcher = Books.query.offset(start).limit(200).all()
 
@@ -100,10 +100,10 @@ def getAuthors():
                 "author_id": author.author_id,
                 "author_name": author.author_name,
                 "img": author.img,
-                "dob": author.dob,
-                "dod": author.dod,
+                "dob": author.dob.strftime("%Y-%m-%d"),
+                "dod": author.dod.strftime("%Y-%m-%d"),
                 "country": author.country,
-                "avg_rating": author.avg_rating,
+                "avg_rating": round(author.avg_rating, 1),
             })
         return authors_list, 200
     else:
@@ -120,7 +120,7 @@ def getUsers():
     if args != {}:
         fetcher = Users.query.filter_by(**args).all()
     else:
-        fetcher = Users.query.offset(start).limit(500).all()
+        fetcher = Users.query.offset(start).limit(200).all()
 
     if fetcher:
         users_list = []
@@ -441,110 +441,118 @@ def randomBooks():
 
 @app.route("/get-statistics", methods=["GET"])
 def getUserStatistics():
-    user_id = request.args.to_dict()["user_id"]
+    try:
+        user_id = request.args.to_dict()["user_id"]
 
-    fetchRequests = Requests.query.order_by(
-        Requests.request_date.desc()).filter_by(user_id=user_id).all()
-    fetchIssues = Issues.query.order_by(
-        Issues.request_date.desc()).filter_by(user_id=user_id).all()
+        fetchRequests = Requests.query.order_by(
+            Requests.request_date.desc()).filter_by(user_id=user_id).all()
+        fetchIssues = Issues.query.order_by(
+            Issues.request_date.desc()).filter_by(user_id=user_id).all()
 
-    fetchData = [i for i in fetchRequests]
-    fetchData.extend([i for i in fetchIssues])
-    dates = [[i.request_date.strftime(
-        '%b'), i.request_date.year] for i in fetchData]
-    year = sorted(list(set([i[1] for i in dates])))[::-1]
-    barData = {}
-    for i in year:
-        months = [j[0] for j in dates if j[1] == i]
-        monDict = {i: months.count(i) for i in months[::-1]}
-        barData[i] = monDict
+        fetchData = [i for i in fetchRequests]
+        fetchData.extend([i for i in fetchIssues])
+        dates = [[i.request_date.strftime(
+            '%b'), i.request_date.year] for i in fetchData]
+        year = sorted(list(set([i[1] for i in dates])))[::-1]
+        barData = {}
+        for i in year:
+            months = [j[0] for j in dates if j[1] == i]
+            monDict = {i: months.count(i) for i in months[::-1]}
+            barData[i] = monDict
 
-    finalBarData = []
-    counter = 0
-    for i in barData:
-        for j in dict(reversed(list(barData[i].items()))):
-            if counter < 10:
-                finalBarData.append([f"{j}'{i%100}", barData[i][j]])
-                counter += 1
-            else:
-                break
+        finalBarData = []
+        counter = 0
+        for i in barData:
+            for j in dict(reversed(list(barData[i].items()))):
+                if counter < 10:
+                    finalBarData.append([f"{j}'{i%100}", barData[i][j]])
+                    counter += 1
+                else:
+                    break
 
-    books = []
-    for i in fetchData:
-        book = Books.query.filter_by(book_id=i.book_id).first()
-        books.append(book.genre)
+        books = []
+        for i in fetchData:
+            book = Books.query.filter_by(book_id=i.book_id).first()
+            books.append(book.genre)
 
-    pieData = dict(sorted({i: books.count(i)
-                   for i in books}.items(), key=lambda x: x[1], reverse=True))
-    if len(pieData) > 5:
-        pieData = dict(list(pieData.items())[:5])
-    finalPieData = [[i, pieData[i]] for i in pieData]
+        pieData = dict(sorted({i: books.count(i)
+                               for i in books}.items(), key=lambda x: x[1], reverse=True))
+        if len(pieData) > 5:
+            pieData = dict(list(pieData.items())[:5])
+        finalPieData = [[i, pieData[i]] for i in pieData]
 
-    fetchUser = requests.get(
-        f"http://127.0.0.1:5000/get-content/users?user_id={user_id}")
-    fetchUser = fetchUser.json()[0]
+        fetchUser = requests.get(
+            f"http://127.0.0.1:5000/get-content/users?user_id={user_id}")
+        fetchUser = fetchUser.json()[0]
 
-    active_month = ""
-    index = 0
-    activity = 0
-    for j, i in enumerate(finalBarData):
-        if i[1] > activity:
-            activity = i[1]
-            index = j
-    if len(finalBarData) > 0:
-        active_month = finalBarData[index][0]
-    ratings = Ratings.query.filter_by(user_id=user_id).all()
-    now = f"{datetime.now()}"
-    days_last_loged = (datetime.strptime(now, "%Y-%m-%d %H:%M:%S.%f") -
-                       datetime.strptime(fetchUser["last_loged"], "%a, %d %b %Y %H:%M:%S %Z")).days
-    cardData = {
-        "total_issued": len(fetchIssues),
-        "total_requests": len(fetchRequests),
-        "most_active_month": active_month,
-        "total_ratings": len(ratings),
-        "days_last_loged": days_last_loged
-    }
+        active_month = ""
+        index = 0
+        activity = 0
+        for j, i in enumerate(finalBarData):
+            if i[1] > activity:
+                activity = i[1]
+                index = j
+        if len(finalBarData) > 0:
+            active_month = finalBarData[index][0]
+        ratings = Ratings.query.filter_by(user_id=user_id).all()
+        now = f"{datetime.now()}"
+        days_last_loged = (datetime.strptime(now, "%Y-%m-%d %H:%M:%S.%f") -
+                           datetime.strptime(fetchUser["last_loged"], "%a, %d %b %Y %H:%M:%S %Z")).days
+        cardData = {
+            "total_issued": len(fetchIssues),
+            "total_requests": len(fetchRequests),
+            "most_active_month": active_month,
+            "total_ratings": len(ratings),
+            "days_last_loged": days_last_loged
+        }
 
-    fetchUser["last_loged"] = datetime.strptime(
-        f"{fetchUser['last_loged']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
-    fetchUser["doj"] = datetime.strptime(
-        f"{fetchUser['doj']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
-    fetchUser["dob"] = datetime.strptime(
-        f"{fetchUser['dob']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
+        fetchUser["last_loged"] = datetime.strptime(
+            f"{fetchUser['last_loged']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
+        fetchUser["doj"] = datetime.strptime(
+            f"{fetchUser['doj']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
+        fetchUser["dob"] = datetime.strptime(
+            f"{fetchUser['dob']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
 
-    fetchRating = requests.get(
-        f"http://127.0.0.1:5000/get-content/ratings?user_id={user_id}")
-    fetchRating = fetchRating.json()
-    score = 100*len(fetchIssues) + 250*len(fetchRating)
-    # score = score*0
-    rank = "Sage" if score >= 13750 else "Scholar" if score >= 5000 else "Literati" if score >= 1750 else "Reader" if score >= 500 else "No"
-    next_criteria = {
-        "No": [
-            "Read 5 Books"
-        ],
-        "Reader": [
-            "Read 10 Books",
-            "Review 3 Books",
-        ],
-        "Literati": [
-            "Read 25 Books",
-            "Review 10 Books",
-        ],
-        "Scholar": [
-            "Read 75 Books",
-            "Review 25 Books",
-        ],
-        "Sage": [
-            "Congratulations!! on reaching the pinnacle."
-        ]
-    }
-    next_points = {
-        "No": 500,
-        "Reader": 1750,
-        "Literati": 5000,
-        "Scholar": 13750,
-    }
-    return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank]}, 200
+        fetchRating = requests.get(
+            f"http://127.0.0.1:5000/get-content/ratings?user_id={user_id}")
+        avg_rate = 0.0
+        if fetchRating.status_code==200:
+            fetchRating = fetchRating.json()
+            avg_rate = round(sum([float(i['rating']) for i in fetchRating])/len(fetchRating),1)
+        else:
+            fetchRating = fetchRating.json()
+        score = 100*len(fetchIssues) + 250*len(fetchRating)
+        # score = score*0
+        rank = "Sage" if score >= 13750 else "Scholar" if score >= 5000 else "Literati" if score >= 1750 else "Reader" if score >= 500 else "No"
+        next_criteria = {
+            "No": [
+                "Read 5 Books"
+            ],
+            "Reader": [
+                "Read 10 Books",
+                "Review 3 Books",
+            ],
+            "Literati": [
+                "Read 25 Books",
+                "Review 10 Books",
+            ],
+            "Scholar": [
+                "Read 75 Books",
+                "Review 25 Books",
+            ],
+            "Sage": [
+                "Congratulations!! on reaching the pinnacle."
+            ]
+        }
+        next_points = {
+            "No": 500,
+            "Reader": 1750,
+            "Literati": 5000,
+            "Scholar": 13750,
+        }
+        return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssues),"numRequests": len(fetchRequests), "avg_rating": avg_rate}, 200
+    except:
+        abort(404, description="No Statistics Available")
 
 
 @app.route("/get-feedbacks", methods=["GET"])
@@ -585,27 +593,52 @@ def getUserFeedbacks():
 def getLibrarianBooks():
     book_id = request.args.to_dict()["book_id"]
     booker = requests.get(
-            f"http://127.0.0.1:5000/get-content/books?book_id={book_id}")
+        f"http://127.0.0.1:5000/get-content/books?book_id={book_id}")
     booker = booker.json()[0]
     issues = requests.get(
-            f"http://127.0.0.1:5000/get-content/issues?book_id={book_id}")
-    if issues.status_code==200:
+        f"http://127.0.0.1:5000/get-content/issues?book_id={book_id}")
+    if issues.status_code == 200:
         issues = issues.json()
     else:
         issues = []
     requester = requests.get(
-            f"http://127.0.0.1:5000/get-content/requests?book_id={book_id}")
-    if requester.status_code==200:
+        f"http://127.0.0.1:5000/get-content/requests?book_id={book_id}")
+    if requester.status_code == 200:
         requester = requester.json()
     else:
         requester = []
     rater = requests.get(
-            f"http://127.0.0.1:5000/get-content/ratings?book_id={book_id}")
-    if rater.status_code==200:
+        f"http://127.0.0.1:5000/get-content/ratings?book_id={book_id}")
+    if rater.status_code == 200:
         rater = [float(i['rating']) for i in rater.json()]
     else:
         rater = []
-    return {"book":booker, "issues":len(issues), "requests":len(requester), "avg_rating":sum(rater)/len(rater) if len(rater)!=0 else 0}
+    return {"book": booker, "issues": len(issues), "requests": len(requester), "avg_rating": sum(rater)/len(rater) if len(rater) != 0 else 0}
+
+
+@app.route("/get-librarian/previewSection", methods=["GET"])
+def getLibrarianSections():
+    section_id = request.args.to_dict()["section_id"]
+    sectioner = requests.get(
+        f"http://127.0.0.1:5000/get-content/sections?section_id={section_id}")
+    sectioner = sectioner.json()[0]
+    return sectioner, 200
+
+
+@app.route("/get-librarian/previewAuthor", methods=["GET"])
+def getLibrarianAuthor():
+    author_id = request.args.to_dict()["author_id"]
+    sectioner = requests.get(
+        f"http://127.0.0.1:5000/get-content/authors?author_id={author_id}")
+    sectioner = sectioner.json()[0]
+    booker = requests.get(
+        f"http://127.0.0.1:5000/get-content/books?author_id={author_id}")
+    if booker.status_code == 200:
+        booker = booker.json()
+    else:
+        booker = []
+    return {"authorData": sectioner, "numBooks": len(booker)}, 200
+
 
 # Data Insertion
 @app.route("/push-content/books", methods=["GET", "POST"])
@@ -635,6 +668,40 @@ def pushBooks():
             return {"message": "Book already exists."}, 406
 
 
+@app.route("/push-content/newBook", methods=["GET", "POST"])
+def pushNewBooks():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/books?book_name={form['book_name']}"
+    fetcher = requests.get(roger)
+    if request.method == "POST":
+        if fetcher.status_code == 404:
+            rogerAuthor = f"http://127.0.0.1:5000/get-content/authors?author_name={form['author_name']}"
+            fetcherAuthor = requests.get(rogerAuthor)
+            if fetcherAuthor.status_code == 404:
+                abort(
+                    406, description=f"Author with name: {form['author_name']} not found. Create new author.")
+                # return jsonify(message=f"Author with name: {form['author_name']} not found. Create new author."), 406
+            else:
+                last_id = Books.query.order_by(
+                    Books.book_id.desc()).first().book_id
+                next_id = nextID(last_id)
+                new_book = Books(
+                    book_id=next_id,
+                    book_name=form["book_name"],
+                    img=form["img"],
+                    author_id=fetcherAuthor.json()[0]["author_id"],
+                    author_name=form["author_name"],
+                    section_id=form["section_id"],
+                    genre=form["genre"],
+                    date_added=datetime.now(),
+                )
+                db.session.add(new_book)
+                db.session.commit()
+                return jsonify(message=f"New Book added with ID: {next_id}"), 200
+        else:
+            return jsonify(message="Book already exists."), 406
+
+
 @app.route("/push-content/authors", methods=["GET", "POST"])
 def pushAuthors():
     form = request.get_json()
@@ -656,9 +723,9 @@ def pushAuthors():
             )
             db.session.add(new_author)
             db.session.commit()
-            return f"New Author added with ID: {next_id}", 200
+            return jsonify(message=f"New Section added with ID: {next_id}"), 200
         else:
-            return {"message": "Author already exists."}, 406
+            return jsonify(message=f"Section already exists: {next_id}"), 404
 
 
 @app.route("/push-content/users", methods=["GET", "POST"])
@@ -702,7 +769,8 @@ def pushSections():
             new_section = Sections(
                 section_id=next_id,
                 section_name=form["section_name"],
-                date_added=datetime.strptime(form["date_added"], "%Y-%m-%d")
+                img=form["img"],
+                date_added=datetime.now()
             )
             db.session.add(new_section)
             db.session.commit()
@@ -979,8 +1047,15 @@ def delete_content():
     return f"Deleted {num_rows_deleted} rows from the {table} table."
 
 
+@app.errorhandler(406)
+def not_acceptable(e):
+    response = jsonify(error=str(e.description))
+    response.status_code = 406
+    return response
+
 # with app.app_context():
 #     Books.__table__.create(db.engine)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

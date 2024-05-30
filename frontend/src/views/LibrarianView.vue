@@ -181,7 +181,6 @@
           SECTION NAME:
           <select
             name="cars"
-            ref="sectionDrop"
             class="createNewEntryDropDown"
             v-model="selectedSection"
             @change="getGenres()"
@@ -197,7 +196,11 @@
         </div>
         <div class="createNewEntry">
           GENRE:
-          <select name="cars" ref="genreDrop" class="createNewEntryDropDown">
+          <select
+            name="cars"
+            v-model="selectedGenre"
+            class="createNewEntryDropDown"
+          >
             <option
               v-for="(dropOption, dropIndex) in dropGenre"
               :key="dropIndex"
@@ -207,11 +210,431 @@
             </option>
           </select>
         </div>
-        <div class="submitNew">SUBMIT</div>
+        <div class="submitNew" @click="submitNewBook()">SUBMIT</div>
       </div>
     </div>
-    <div class="mainPanel" v-if="changeView == 6">Section Management</div>
-    <div class="mainPanel" v-if="changeView == 7">User Management</div>
+    <div class="mainPanel withPreview" v-if="changeView == 6">
+      <div class="headBookTitleContainer">
+        <div class="headBookTitle">Section Management</div>
+        <div class="addNewBook" @click="createSection()">Add Section</div>
+      </div>
+      <div
+        v-for="(section, index) in sections"
+        :key="index"
+        class="authorCard"
+        @click="changePreviewSection(section.section_id)"
+      >
+        <div class="authorImgContainer">
+          <img :src="section.img" alt="" class="authorImg" />
+        </div>
+        <div class="authorContent">
+          <p class="authorName">{{ section.section_name }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="previewPanel" v-if="changeView == 6 && !addSectionPallet">
+      <div class="previewDetailsContainer">
+        <div class="previewImgContainer previewSectionImgContainer">
+          <img
+            :src="previewSection.img"
+            alt=""
+            class="imgContainer previewSectionImg"
+          />
+          <div class="downloadPDFContainer">
+            <div
+              class="downloadPDF"
+              @click="deleteSection(previewSection.section_id)"
+            >
+              <img
+                src="@/assets/images/delete-icon.png"
+                alt="delete"
+                class="pdfIcon"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="titleDiv" v-if="!isSectionTitleEdit">
+          <p class="previewTitle">
+            {{ previewSection.section_name }}
+          </p>
+          <img
+            src="@/assets/images/edit-icon.png"
+            alt=""
+            class="editActions"
+            @click="editSectionTitle()"
+          />
+        </div>
+        <div class="previewTitleEdit" v-else>
+          <input
+            v-model="sectionTitleNew"
+            @keyup.enter="isSectionTitleEdit = false"
+            @blur="handleSectionTitleBlur"
+            ref="sectionTitleInput"
+          />
+          <img
+            src="@/assets/images/tick-icon.png"
+            alt="Edit Section Title"
+            title="Edit Section Title"
+            class="editActions"
+            @mousedown.prevent="saveSectionTitle"
+          />
+        </div>
+      </div>
+    </div>
+    <div class="previewPanel" v-if="changeView == 6 && addSectionPallet">
+      <p class="previewTitle">Add New Section</p>
+      <div class="previewDetailsContainer">
+        <div class="createNewEntry">
+          SECTION COVER URL:
+          <input v-model="createSectionImg" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          SECTION NAME:
+          <input v-model="createSectionName" class="createNewEntryInput" />
+        </div>
+
+        <div class="submitNew" @click="submitNewSection()">SUBMIT</div>
+      </div>
+    </div>
+    <div class="mainPanel withPreview" v-if="changeView == 7">
+      <div class="headBookTitleContainer">
+        <div class="headBookTitle">Author Management</div>
+        <div class="addNewBook" @click="createAuthor()">Add Author</div>
+      </div>
+      <div
+        v-for="(author, index) in authors"
+        :key="index"
+        class="authorCard"
+        @click="changePreviewAuthor(author.author_id)"
+      >
+        <div class="authorImgContainer">
+          <img :src="author.img" alt="" class="authorImg" />
+        </div>
+        <div class="authorContent">
+          <p class="authorName">{{ author.author_name }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="previewPanel" v-if="changeView == 7 && !addAuthorPallet">
+      <div class="previewDetailsContainer">
+        <div class="previewImgContainer previewSectionImgContainer">
+          <img
+            :src="previewAuthor.img"
+            alt=""
+            class="imgContainer previewSectionImg"
+          />
+          <div class="downloadPDFContainer">
+            <div
+              class="downloadPDF"
+              @click="deleteAuthor(previewAuthor.author_id)"
+            >
+              <img
+                src="@/assets/images/delete-icon.png"
+                alt="delete"
+                class="pdfIcon"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="titleDiv" v-if="!isAuthorNameEdit">
+          <p class="previewTitle">
+            {{ previewAuthor.author_name }}
+          </p>
+          <img
+            src="@/assets/images/edit-icon.png"
+            alt=""
+            class="editActions"
+            @click="editAuthorName()"
+          />
+        </div>
+        <div class="previewTitleEdit" v-else>
+          <input
+            v-model="authorNameNew"
+            @keyup.enter="isAuthorNameEdit = false"
+            @blur="handleAuthorNameBlur"
+            ref="authorNameInput"
+          />
+          <img
+            src="@/assets/images/tick-icon.png"
+            alt="Edit Section Title"
+            title="Edit Section Title"
+            class="editActions"
+            @mousedown.prevent="saveAuthorName"
+          />
+        </div>
+        <div class="majorDetails">
+          <p v-if="!isAuthorDOBEdit">
+            DATE OF BIRTH: <span>{{ previewAuthor.dob }}</span>
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt="Edit Author"
+              title="Edit Author"
+              class="editActions"
+              @click="editAuthorDOB()"
+            />
+          </p>
+          <div class="editable" v-else>
+            DATE OF BIRTH:
+            <input
+              v-model="authorDOBNew"
+              @keyup.enter="isAuthorDOBEdit = false"
+              @blur="handleAuthorDOBBlur"
+              ref="authorDOBInput"
+            />
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt="Edit Author"
+              title="Edit Author"
+              class="editActions"
+              @mousedown.prevent="saveAuthorDOB"
+            />
+          </div>
+          <p v-if="!isAuthorDODEdit">
+            DATE OF DEATH: <span>{{ previewAuthor.dod }}</span>
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @click="editAuthorDOD()"
+            />
+          </p>
+          <div class="editable" v-else>
+            DATE OF DEATH:
+            <input
+              v-model="authorDODNew"
+              @keyup.enter="isAuthorDODEdit = false"
+              @blur="handleAuthorDODBlur"
+              ref="authorDOBInput"
+            />
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @mousedown.prevent="saveAuthorDOD"
+            />
+          </div>
+          <p v-if="!isAuthorCountryEdit">
+            COUNTRY: <span>{{ previewAuthor.country }}</span>
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @click="editAuthorCountry()"
+            />
+          </p>
+          <div class="editable" v-else>
+            COUNTRY:
+            <input
+              v-model="authorCountryNew"
+              @keyup.enter="isAuthorCountryEdit = false"
+              @blur="handleAuthorCountryBlur"
+              ref="authorCountryInput"
+            />
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @mousedown.prevent="saveAuthorCountry"
+            />
+          </div>
+          <p v-if="!isAuthorRatingEdit">
+            AVG. RATING:
+            <span>{{ previewAuthor.avg_rating.toFixed(1) }}</span>
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @click="editAuthorRating()"
+            />
+          </p>
+          <div class="editable" v-else>
+            AVG. RATING:
+            <input
+              v-model="authorRatingNew"
+              @keyup.enter="isAuthorRatingEdit = false"
+              @blur="handleAuthorRatingBlur"
+              ref="authorRatingInput"
+            />
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @mousedown.prevent="saveAuthorRating"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="previewPanel" v-if="changeView == 7 && addAuthorPallet">
+      <p class="previewTitle">Add New Author</p>
+      <div class="previewDetailsContainer">
+        <div class="createNewEntry">
+          AUTHOR IMAGE URL:
+          <input v-model="createAuthorImg" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          AUTHOR NAME:
+          <input v-model="createAuthorName" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          DATE OF BIRTH:
+          <input v-model="createAuthorDOB" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          DATE OF DEATH:
+          <input v-model="createAuthorDOD" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          COUNTRY:
+          <input v-model="createAuthorCountry" class="createNewEntryInput" />
+        </div>
+        <div class="createNewEntry">
+          AVG. RATING:
+          <input v-model="createAuthorRating" class="createNewEntryInput" />
+        </div>
+
+        <div class="submitNew" @click="submitNewAuthor()">SUBMIT</div>
+      </div>
+    </div>
+    <div class="mainPanel withPreview" v-if="changeView == 8">
+      <div class="headBookTitleContainer">
+        <div class="headBookTitle">User Management</div>
+      </div>
+      <div
+        v-for="(user, index) in users"
+        :key="index"
+        class="authorCard"
+        @click="changePreviewUser(user.user_id)"
+      >
+        <div class="authorImgContainer userImgContainer">
+          <img
+            src="@/assets/images/male profile.png"
+            v-if="user.gender == 'Male'"
+            alt=""
+            class="authorImg userImg"
+          />
+          <img
+            src="@/assets/images/female profile.png"
+            v-else
+            alt=""
+            class="authorImg userImg"
+          />
+        </div>
+        <div class="authorContent">
+          <p class="authorName">{{ user.user_name }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="previewPanel" v-if="changeView == 8">
+      <div class="userPreviewCont">
+        <div
+          class="previewImgContainer previewSectionImgContainer previewUserContainer"
+        >
+          <img
+            src="@/assets/images/male profile.png"
+            v-if="previewUser.gender == 'Male'"
+            alt=""
+            class="imgContainer previewSectionImg previewUserImg"
+          />
+          <img
+            src="@/assets/images/female profile.png"
+            v-else
+            alt=""
+            class="imgContainer previewSectionImg previewUserImg"
+          />
+        </div>
+        <div class="titleDiv">
+          <p class="previewTitle">
+            {{ previewUser.user_name }}
+          </p>
+        </div>
+        <div class="majorDetails">
+          <p>
+            EMAIL: <span>{{ previewUser.email }}</span>
+          </p>
+          <p>
+            DATE JOINED: <span>{{ previewUser.doj }}</span>
+          </p>
+          <p>
+            LAST LOGED: <span>{{ previewUser.last_loged }}</span>
+          </p>
+        </div>
+        <div class="userStatistics">
+          <div class="userLeague">
+            <img
+              v-if="userStats.rank == 'Sage'"
+              src="@/assets/images/Sage_logo.png"
+              :alt="`${userStats.rank} League`"
+              class="rankLogo"
+            />
+            <img
+              v-if="userStats.rank == 'Scholar'"
+              src="@/assets/images/Scholar_logo.png"
+              :alt="`${userStats.rank} League`"
+              class="rankLogo"
+            />
+            <img
+              v-if="userStats.rank == 'Literati'"
+              src="@/assets/images/Literati_logo.png"
+              :alt="`${userStats.rank} League`"
+              class="rankLogo"
+            />
+            <img
+              v-if="userStats.rank == 'Reader'"
+              src="@/assets/images/Reader_logo.png"
+              :alt="`${userStats.rank} League`"
+              class="rankLogo"
+            />
+          </div>
+          <div class="userStatsData">
+            <p class="league">{{ userStats.rank }} League</p>
+            <div class="score">
+              {{ userStats.score }}
+              <img
+                src="@/assets/images/points.png"
+                alt="points"
+                class="scorePoint"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="bookStats">
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ userStats.numIssues }}</div>
+            <p class="bookStatTitle"># Issues</p>
+          </div>
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ userStats.numRequests }}</div>
+            <p class="bookStatTitle"># Requests</p>
+          </div>
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ userStats.avg_rating }}</div>
+            <p class="bookStatTitle">Avg. Rating</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="userActions">
+        <div class="actionBtns" @click="banUser(previewUser.user_id)">
+          <img src="@/assets/images/ban-icon.png" alt="" class="actionBtnImg" />
+          Ban
+        </div>
+        <div class="actionBtns sideBtn" @click="save_book(previewBook.book_id)">
+          <img
+            src="@/assets/images/promote-icon.png"
+            alt=""
+            class="actionBtnImg"
+          />
+          Promote
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -227,18 +650,49 @@ export default {
       books: [],
       sections: [],
       authors: [],
+      users: [],
       genres: [],
-      selectedSection: null,
       dropGenre: [],
       previewBook: {},
+      previewSection: {},
+      previewAuthor: {},
+      previewUser: {},
+      userStats: {},
       changeView: 1,
       isTitleEdit: false,
       isAuthorEdit: false,
       isGenreEdit: false,
+      isSectionTitleEdit: false,
+      isAuthorNameEdit: false,
+      isAuthorDOBEdit: false,
+      isAuthorDODEdit: false,
+      isAuthorCountryEdit: false,
+      isAuthorRatingEdit: false,
       titleNew: "",
       genreNew: "",
       authorNew: "",
-      addBookPallet: true,
+      sectionTitleNew: "",
+      authorNameNew: "",
+      authorDOBNew: "",
+      authorDODNew: "",
+      authorCountryNew: "",
+      authorRatingNew: "",
+      addBookPallet: false,
+      addSectionPallet: false,
+      addAuthorPallet: false,
+      createBookImg: "",
+      createBookName: "",
+      createBookAuthor: "",
+      selectedSection: "",
+      selectedGenre: "",
+      createSectionName: "",
+      createSectionImg: "",
+      createAuthorImg: "",
+      createAuthorName: "",
+      createAuthorDOB: "",
+      createAuthorDOD: "",
+      createAuthorCountry: "",
+      createAuthorRating: "",
     };
   },
   created() {
@@ -248,15 +702,54 @@ export default {
     changeMiddleView(view) {
       this.changeView = view;
       if (view == 5) {
-        this.fetchMyBooks();
+        this.fetchBooks();
+      } else if (view == 6) {
+        this.fetchSections();
+      } else if (view == 7) {
+        this.fetchAuthors();
+      } else if (view == 8) {
+        this.fetchUsers();
       }
     },
-    fetchMyBooks() {
+    fetchBooks() {
       axios
-        .get("http://127.0.0.1:5000/get-content/books")
+        .get("http://127.0.0.1:5000/get-content/latestBooks")
         .then((response) => {
           this.books = response.data;
           this.changePreviewBook(this.books[0].book_id);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchSections() {
+      axios
+        .get("http://127.0.0.1:5000/get-content/sections")
+        .then((response) => {
+          this.sections = response.data;
+          this.changePreviewSection(this.sections[0].section_id);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchAuthors() {
+      axios
+        .get("http://127.0.0.1:5000/get-content/authors")
+        .then((response) => {
+          this.authors = response.data;
+          this.changePreviewAuthor(this.authors[0].author_id);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchUsers() {
+      axios
+        .get("http://127.0.0.1:5000/get-content/users")
+        .then((response) => {
+          this.users = response.data;
+          this.changePreviewUser(this.users[0].user_id);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -273,23 +766,127 @@ export default {
           this.$router.push("/error");
         });
     },
+    createSection() {
+      this.addSectionPallet = true;
+    },
+    createAuthor() {
+      this.addAuthorPallet = true;
+    },
     getGenres() {
-      console.log(this.selectedSection);
       axios
         .get(
           `http://127.0.0.1:5000/get-content/books?section_id=${this.selectedSection}`
         )
         .then((response) => {
-          let genres = response.data.forEach((element) => {
-            element.genre;
-          });
-          console.log(genres);
+          let genres = response.data.map((element) => element.genre);
           this.dropGenre = [...new Set(genres)];
-          console.log(this.dropGenre);
         })
         .catch(() => {
           this.$router.push("/error");
         });
+    },
+    async submitNewBook() {
+      if (
+        this.createBookImg != "" &&
+        this.createBookName != "" &&
+        this.createBookAuthor != "" &&
+        this.selectedSection != "" &&
+        this.selectedGenre != ""
+      ) {
+        try {
+          const response = await axios.post(
+            "http://127.0.0.1:5000/push-content/newBook",
+            {
+              book_name: this.createBookName,
+              img: this.createBookImg,
+              author_name: this.createBookAuthor,
+              section_id: this.selectedSection,
+              genre: this.selectedGenre,
+            }
+          );
+          console.log("Success:", response.data);
+          window.location.reload();
+        } catch (error) {
+          if (
+            error.response &&
+            error.response.data &&
+            error.response.data.error
+          ) {
+            alert(error.response.data.error);
+          } else {
+            alert("An unknown error occurred.");
+          }
+        }
+      } else {
+        alert("Fill all the required fields to proceed.");
+      }
+    },
+    async submitNewSection() {
+      if (this.createSectionImg != "" && this.createSectionName != "") {
+        try {
+          const response = await axios.post(
+            "http://127.0.0.1:5000/push-content/sections",
+            {
+              section_name: this.createSectionName,
+              img: this.createSectionImg,
+            }
+          );
+          console.log("Success:", response.data);
+          window.location.reload();
+        } catch (error) {
+          console.log(error);
+          if (
+            error.response &&
+            error.response.data &&
+            error.response.data.error
+          ) {
+            alert(error.response.data.error);
+          } else {
+            alert("An unknown error occurred.");
+          }
+        }
+      } else {
+        alert("Fill all the required fields to proceed.");
+      }
+    },
+    async submitNewAuthor() {
+      if (
+        this.createAuthorImg != "" &&
+        this.createAuthorName != "" &&
+        this.createAuthorDOB != "" &&
+        this.createAuthorDOD != "" &&
+        this.createAuthorCountry != "" &&
+        this.createAuthorRating != ""
+      ) {
+        try {
+          const response = await axios.post(
+            "http://127.0.0.1:5000/push-content/authors",
+            {
+              author_name: this.createAuthorName,
+              img: this.createAuthorImg,
+              dob: this.createAuthorDOB,
+              dod: this.createAuthorDOD,
+              country: this.createAuthorCountry,
+              avg_rating: this.createAuthorRating,
+            }
+          );
+          console.log("Success:", response.data);
+          window.location.reload();
+        } catch (error) {
+          console.log(error);
+          if (
+            error.response &&
+            error.response.data &&
+            error.response.data.error
+          ) {
+            alert(error.response.data.error);
+          } else {
+            alert("An unknown error occurred.");
+          }
+        }
+      } else {
+        alert("Fill all the required fields to proceed.");
+      }
     },
     editTitle() {
       this.titleNew = this.previewBook.book.book_name;
@@ -379,6 +976,168 @@ export default {
         alert("Unable to edit the Author Name. Kindly try again.");
       }
     },
+    editSectionTitle() {
+      this.sectionTitleNew = this.previewSection.section_name;
+      this.isSectionTitleEdit = true;
+    },
+    handleSectionTitleBlur(event) {
+      if (this.$refs.sectionTitleInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isSectionTitleEdit = false;
+    },
+    async saveSectionTitle(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/sections",
+          {
+            section_id: this.previewSection.section_id,
+            section_name: this.sectionTitleNew,
+          }
+        );
+        this.previewSection.section_name = this.sectionTitleNew;
+        this.isSectionTitleEdit = false;
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to edit the Section Name. Kindly try again.");
+      }
+    },
+    editAuthorName() {
+      this.authorNameNew = this.previewAuthor.author_name;
+      this.isAuthorNameEdit = true;
+    },
+    handleAuthorNameBlur(event) {
+      if (this.$refs.authorNameInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isAuthorNameEdit = false;
+    },
+    async saveAuthorName(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/authors",
+          {
+            author_id: this.previewAuthor.author_id,
+            author_name: this.authorNameNew,
+          }
+        );
+        this.previewAuthor.author_name = this.authorNameNew;
+        this.isAuthorNameEdit = false;
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to edit the Author Name. Kindly try again.");
+      }
+    },
+    editAuthorDOB() {
+      this.authorDOBNew = this.previewAuthor.dob;
+      this.isAuthorDOBEdit = true;
+    },
+    handleAuthorDOBBlur(event) {
+      if (this.$refs.authorDOBInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isAuthorDOBEdit = false;
+    },
+    async saveAuthorDOB(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/authors",
+          {
+            author_id: this.previewAuthor.author_id,
+            dob: this.authorDOBNew,
+          }
+        );
+        this.previewAuthor.dob = this.authorDOBNew;
+        this.isAuthorDOBEdit = false;
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to edit the Author DOB. Kindly try again.");
+      }
+    },
+    editAuthorDOD() {
+      this.authorDODNew = this.previewAuthor.dod;
+      this.isAuthorDODEdit = true;
+    },
+    handleAuthorDODBlur(event) {
+      if (this.$refs.authorDODInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isAuthorDODEdit = false;
+    },
+    async saveAuthorDOD(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/authors",
+          {
+            author_id: this.previewAuthor.author_id,
+            dod: this.authorDODNew,
+          }
+        );
+        this.previewAuthor.dod = this.authorDODNew;
+        this.isAuthorDODEdit = false;
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to edit the Author DOD. Kindly try again.");
+      }
+    },
+    editAuthorCountry() {
+      this.authorCountryNew = this.previewAuthor.country;
+      this.isAuthorCountryEdit = true;
+    },
+    handleAuthorCountryBlur(event) {
+      if (this.$refs.authorCountryInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isAuthorCountryEdit = false;
+    },
+    async saveAuthorCountry(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/authors",
+          {
+            author_id: this.previewAuthor.author_id,
+            country: this.authorCountryNew,
+          }
+        );
+        this.previewAuthor.country = this.authorCountryNew;
+        this.isAuthorCountryEdit = false;
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to edit the Author Country. Kindly try again.");
+      }
+    },
+    editAuthorRating() {
+      this.authorRatingNew = this.previewAuthor.avg_rating;
+      this.isAuthorRatingEdit = true;
+    },
+    handleAuthorRatingBlur(event) {
+      if (this.$refs.authorRatingInput.contains(event.relatedTarget)) {
+        return;
+      }
+      this.isAuthorRatingEdit = false;
+    },
+    async saveAuthorRating(event) {
+      event.stopPropagation();
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/authors",
+          {
+            author_id: this.previewAuthor.author_id,
+            avg_rating: this.authorRatingNew,
+          }
+        );
+        this.previewAuthor.avg_rating = this.authorRatingNew;
+        this.isAuthorRatingEdit = false;
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to edit the Author Avg Rating. Kindly try again.");
+      }
+    },
     async deleteBook(book_id) {
       try {
         const response = await axios.delete(
@@ -390,6 +1149,28 @@ export default {
         alert("Unable to Delete the book. Kindly try again.");
       }
     },
+    async deleteSection(section_id) {
+      try {
+        const response = await axios.delete(
+          `http://127.0.0.1:5000/delete-content/sections?section_id=${section_id}`
+        );
+        console.log("Success:", response.data);
+        window.location.reload();
+      } catch (error) {
+        alert("Unable to Delete the section. Kindly try again.");
+      }
+    },
+    async deleteAuthor(author_id) {
+      try {
+        const response = await axios.delete(
+          `http://127.0.0.1:5000/delete-content/authors?author_id=${author_id}`
+        );
+        console.log("Success:", response.data);
+        window.location.reload();
+      } catch (error) {
+        alert("Unable to Delete the section. Kindly try again.");
+      }
+    },
     confirmDelete(book_id, book_name) {
       if (
         confirm(`Are you sure you want to delete this book : ${book_name}?`)
@@ -398,6 +1179,7 @@ export default {
       }
     },
     changePreviewBook(book_id) {
+      this.addBookPallet = false;
       axios
         .get(
           `http://127.0.0.1:5000/get-librarian/previewBook?book_id=${book_id}`
@@ -410,12 +1192,79 @@ export default {
           this.$router.push("/error");
         });
     },
+    changePreviewSection(section_id) {
+      this.addSectionPallet = false;
+      console.log(section_id);
+      axios
+        .get(
+          `http://127.0.0.1:5000/get-librarian/previewSection?section_id=${section_id}`
+        )
+        .then((response) => {
+          this.previewSection = response.data;
+          // this.previewBook.avg_rating = this.previewBook.avg_rating.toFixed(1);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    changePreviewAuthor(author_id) {
+      this.addAuthorPallet = false;
+      axios
+        .get(`http://127.0.0.1:5000/get-content/authors?author_id=${author_id}`)
+        .then((response) => {
+          this.previewAuthor = response.data[0];
+          // this.previewBook.avg_rating = this.previewBook.avg_rating.toFixed(1);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    changePreviewUser(user_id) {
+      axios
+        .get(`http://127.0.0.1:5000/get-content/users?user_id=${user_id}`)
+        .then((response) => {
+          this.previewUser = response.data[0];
+          this.previewUser.doj = this.formatDate(this.previewUser.doj);
+          this.previewUser.last_loged = this.formatDate(
+            this.previewUser.last_loged
+          );
+
+          axios
+            .get(
+              `http://127.0.0.1:5000/get-statistics?user_id=${response.data[0].user_id}`
+            )
+            .then((responseStats) => {
+              this.userStats = responseStats.data;
+            })
+            .catch(() => {
+              this.userStats = {
+                rank: "No",
+                score: Math.floor(Math.random() * 301),
+                numRequests: 0,
+                numIssues: 0,
+                avg_rating: 0.0,
+              };
+            });
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
     shortenText(text) {
       if (text.length > 35) {
         return `${text.substring(0, 35)}...`;
       } else {
         return text;
       }
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = date.toLocaleString("default", { month: "short" });
+      const year = date.getFullYear();
+      const formattedDate = `${day} ${month} ${year}`;
+
+      return formattedDate;
     },
   },
 };
@@ -469,6 +1318,17 @@ export default {
   overflow: hidden;
   overflow-y: scroll;
 }
+.userPreviewCont {
+  display: block;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+  height: 92%;
+  padding: 1rem 1.5rem;
+  overflow: hidden;
+  overflow-y: scroll;
+}
 .card {
   display: flex;
   flex-direction: column;
@@ -509,6 +1369,9 @@ export default {
   height: 100%;
   width: auto;
 }
+.userImg {
+  height: 80%;
+}
 .bookContent {
   height: 30%;
   padding: 0.5rem 1rem;
@@ -536,6 +1399,12 @@ export default {
   background-color: #25352b;
   z-index: 3;
 }
+.userActions {
+  display: flex;
+  width: 100%;
+  height: 8%;
+  background-color: #25352b;
+}
 .actionBtns {
   display: flex;
   justify-content: center;
@@ -544,6 +1413,7 @@ export default {
   width: 50%;
   cursor: pointer;
   font-size: 0.9rem;
+  font-weight: 600;
   transition: all 0.2s ease;
 }
 .actionBtnImg {
@@ -561,6 +1431,21 @@ export default {
   height: 20rem;
   width: 100%;
   position: relative;
+}
+.previewSectionImgContainer {
+  height: 15rem;
+  width: 15rem;
+  border-radius: 10rem;
+}
+.previewUserContainer {
+  align-items: center;
+  background-color: white;
+}
+.previewUserImg {
+  height: 80% !important;
+}
+.previewSectionImg {
+  object-fit: cover;
 }
 .editable {
   display: flex;
@@ -792,5 +1677,133 @@ export default {
   padding: 0.2rem 0.2rem;
   border-radius: 0.2rem;
   outline: none;
+}
+.authorCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 13rem;
+  width: 10rem;
+  margin: 0.7rem 1.4rem;
+  cursor: pointer;
+}
+.authorImgContainer {
+  display: flex;
+  height: 10rem;
+  width: 10rem;
+  border-radius: 10rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+}
+.userImgContainer {
+  justify-content: center;
+  align-items: center;
+  background-color: white;
+}
+.authorImg {
+  height: 100%;
+  width: auto;
+  object-fit: cover;
+}
+.userImg {
+  height: 80%;
+}
+.authorContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 3rem;
+}
+.authorName {
+  text-align: center;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.downloadPDFContainer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  z-index: 1;
+}
+.downloadPDF {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 2rem;
+  width: 2rem;
+  padding: 0.4rem;
+  border-radius: 30rem;
+  margin-bottom: 0.8rem;
+  background-color: white;
+  position: relative;
+  cursor: pointer;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+.downloadPDF:hover {
+  background-color: #25352b;
+}
+.downloadPDF:hover .pdfIcon {
+  filter: none;
+}
+.pdfIcon {
+  width: auto;
+  height: 100%;
+  filter: grayscale(100%) brightness(0);
+}
+.userStatistics {
+  display: flex;
+  height: 5rem;
+  align-items: center;
+}
+.userLeague {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 3.5rem;
+  width: 3.5rem;
+  margin: 1rem;
+  margin-left: 0rem;
+  border-radius: 10rem;
+  background-color: #25352b;
+}
+.userStatsData {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 3.4rem;
+}
+.rankLogo {
+  height: 80%;
+  width: auto;
+}
+.league {
+  font-size: 1.1rem;
+  font-weight: 600;
+  height: 1.8rem;
+  font-style: italic;
+  color: rgb(61, 61, 61);
+  padding: 0rem 0.2rem;
+}
+.score {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 2rem;
+  width: 100%;
+  color: #e6ac45;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 0rem 0.2rem;
+}
+.scorePoint {
+  height: 80%;
+  width: auto;
+  margin-left: 0.3rem;
 }
 </style>
