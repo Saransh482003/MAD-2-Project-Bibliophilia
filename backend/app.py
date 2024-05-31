@@ -5,7 +5,7 @@ from models import *
 import random
 import requests
 import math
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from dateutil import parser
 
 app = Flask(__name__)
@@ -640,6 +640,41 @@ def getLibrarianAuthor():
     return {"authorData": sectioner, "numBooks": len(booker)}, 200
 
 
+@app.route("/get-librarian/requests", methods=["GET"])
+def getLibrarianRequests():
+    requests = db.session.query(Requests, Books, Users).join(Books, Books.book_id == Requests.book_id).join(Users, Users.user_id == Requests.user_id).order_by(Requests.request_date.desc()).all()
+    allRequests = []
+    for request, book, user in requests:
+        allRequests.append({
+            "sno": request.sno,
+            "book_id" : book.book_id,
+            "book_name" : book.book_name,
+            "user_id" : user.user_id,
+            "user_name" : user.user_name,
+            "request_date" : request.request_date.strftime("%d %b %Y"),
+        })
+    return jsonify(allRequests), 200
+
+
+@app.route("/get-librarian/issues", methods=["GET"])
+def getLibrarianIssues():
+    requests = db.session.query(Issues, Books, Users).join(Books, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).order_by(Issues.doi.desc()).limit(100).all()
+    allIssues = []
+    now= datetime.now()
+    for issue, book, user in requests:
+        allIssues.append({
+            "sno": issue.sno,
+            "book_id" : book.book_id,
+            "book_name" : book.book_name,
+            "user_id" : user.user_id,
+            "user_name" : user.user_name,
+            "doi" : issue.doi.strftime("%d %b %Y"),
+            "dor" : issue.dor.strftime("%d %b %Y"),
+            "current_issue": True if now < issue.dor else False
+        })
+    return jsonify(allIssues), 200
+
+
 # Data Insertion
 @app.route("/push-content/books", methods=["GET", "POST"])
 def pushBooks():
@@ -815,10 +850,9 @@ def pushIssues():
                 sno=next_id,
                 book_id=form["book_id"],
                 user_id=form["user_id"],
-                request_date=datetime.strptime(
-                    form["request_date"], "%Y-%m-%d"),
-                doi=datetime.strptime(form["doi"], "%Y-%m-%d"),
-                dor=datetime.strptime(form["dor"], "%Y-%m-%d")
+                request_date=datetime.now() if "request_date" not in form else datetime.strptime(form["request_date"], "%Y-%m-%d"),
+                doi=datetime.now() if "doi" not in form else datetime.strptime(form["doi"], "%Y-%m-%d"),
+                dor=datetime.now() + timedelta(days=7) if "dor" not in form else datetime.strptime(form["dor"], "%Y-%m-%d"),
             )
             db.session.add(new_issue)
             db.session.commit()
@@ -950,15 +984,9 @@ def putIssues():
         book_id=form["book_id"], user_id=form["user_id"]).first()
     if request.method == "PUT":
         if fetcher:
-            for i in form:
-                try:
-                    setattr(fetcher, i, datetime.strptime(form[i], "%Y-%m-%d"))
-                except:
-                    setattr(fetcher, i, form[i])
+            fetcher.dor = datetime.now() if "dor" not in form else datetime.strptime(form["dor"], "%Y-%m-%d")
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/issues?book_id={form['book_id']}&user_id={form['user_id']}"
-            fetcher = requests.get(roger).json()
-            return fetcher, 200
+            return {"message": "Issues do not exists."}, 200
         else:
             return {"message": "Issues do not exists."}, 406
 
@@ -1036,6 +1064,19 @@ def deleteIssues():
         return {"message": f"Issue with book id {args['book_id']} & user id {args['book_id']} deleted"}, 200
     else:
         return {"message": "Issue do not exist"}, 406
+
+
+@app.route("/delete-content/requests", methods=["GET", "DELETE"])
+def deleteRequests():
+    args = request.args.to_dict()
+    fetcher = Requests.query.filter_by(
+        book_id=args["book_id"], user_id=args["user_id"]).first()
+    if fetcher:
+        db.session.delete(fetcher)
+        db.session.commit()
+        return {"message": f"Request with book id {args['book_id']} & user id {args['book_id']} deleted"}, 200
+    else:
+        return {"message": "Request do not exist"}, 406
 
 
 # Table Truncation

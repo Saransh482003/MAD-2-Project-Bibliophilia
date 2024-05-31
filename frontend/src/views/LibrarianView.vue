@@ -4,8 +4,84 @@
 
     <div class="mainPanel" v-if="changeView == 1">Dashboard</div>
     <div class="mainPanel" v-if="changeView == 2">Search</div>
-    <div class="mainPanel" v-if="changeView == 3">Issue Requests</div>
-    <div class="mainPanel" v-if="changeView == 4">Issue Logs</div>
+    <div class="mainPanel directionColumn" v-if="changeView == 3">
+      <div class="headBookTitleContainer">
+        <div class="headBookTitle">Issue Requests</div>
+      </div>
+      <div class="logHead">
+        <div class="issueRow snoRow">Request Date</div>
+        <div class="issueRow titleRow">Book Title</div>
+        <div class="issueRow userNameRow">User Name</div>
+        <div class="issueRow actionRow">Actions</div>
+      </div>
+      <div
+        class="logHead whiteBg"
+        v-for="(request, index) in allRequests"
+        :key="index"
+      >
+        <div class="issueRow snoRow">{{ request.request_date }}</div>
+        <div class="issueRow titleRow">{{ request.book_name }}</div>
+        <div class="issueRow userNameRow">{{ request.user_name }}</div>
+        <div class="issueRow actionRow">
+          <div
+            class="issueAction"
+            @click="acceptIssue(request.book_id, request.user_id)"
+          >
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Issues
+          </div>
+          <div
+            class="issueAction"
+            @click="rejectIssue(request.book_id, request.user_id)"
+          >
+            <img
+              src="@/assets/images/cross-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Reject
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mainPanel directionColumn" v-if="changeView == 4">
+      <div class="headBookTitleContainer">
+        <div class="headBookTitle">Issue Logs</div>
+      </div>
+      <div class="logHead">
+        <div class="issueRow snoRow">Issue Date</div>
+        <div class="issueRow titleRow">Book Title</div>
+        <div class="issueRow userNameRow">User Name</div>
+        <div class="issueRow actionRow">Return Date</div>
+      </div>
+      <div
+        class="logHead whiteBg"
+        v-for="(issue, index) in allIssues"
+        :key="index"
+      >
+        <div class="issueRow snoRow">{{ issue.doi }}</div>
+        <div class="issueRow titleRow">{{ issue.book_name }}</div>
+        <div class="issueRow userNameRow">{{ issue.user_name }}</div>
+        <div class="issueRow actionRow" v-if="issue.current_issue">
+          <div
+            class="issueAction"
+            @click="revokeIssue(issue.book_id, issue.user_id)"
+          >
+            <img
+              src="@/assets/images/return_icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Revoke Issue
+          </div>
+        </div>
+        <div class="issueRow actionRow" v-else>{{ issue.dor }}</div>
+      </div>
+    </div>
     <div class="mainPanel withPreview" v-if="changeView == 5">
       <div class="headBookTitleContainer">
         <div class="headBookTitle">Book Management</div>
@@ -621,17 +697,25 @@
       </div>
 
       <div class="userActions">
-        <div class="actionBtns" @click="banUser(previewUser.user_id)">
+        <div
+          class="actionBtns userActionBtns"
+          title="Permanent Ban"
+          @click="banUser(previewUser.user_id)"
+        >
           <img src="@/assets/images/ban-icon.png" alt="" class="actionBtnImg" />
           Ban
         </div>
-        <div class="actionBtns sideBtn" @click="save_book(previewBook.book_id)">
+        <div
+          class="actionBtns userActionBtns sideBtn"
+          title="Temporary Ban for 30 Days"
+          @click="interdictUser(previewUser.user_id)"
+        >
           <img
-            src="@/assets/images/promote-icon.png"
+            src="@/assets/images/Interdict-icon.png"
             alt=""
             class="actionBtnImg"
           />
-          Promote
+          Interdict
         </div>
       </div>
     </div>
@@ -658,6 +742,8 @@ export default {
       previewAuthor: {},
       previewUser: {},
       userStats: {},
+      allRequests: [],
+      allIssues: [],
       changeView: 1,
       isTitleEdit: false,
       isAuthorEdit: false,
@@ -701,7 +787,11 @@ export default {
   methods: {
     changeMiddleView(view) {
       this.changeView = view;
-      if (view == 5) {
+      if (view == 3) {
+        this.fetchRequests();
+      } else if (view == 4) {
+        this.fetchIssues();
+      } else if (view == 5) {
         this.fetchBooks();
       } else if (view == 6) {
         this.fetchSections();
@@ -709,6 +799,51 @@ export default {
         this.fetchAuthors();
       } else if (view == 8) {
         this.fetchUsers();
+      }
+    },
+    rejectIssue(book_id, user_id) {
+      axios
+        .get(
+          `http://127.0.0.1:5000/delete-content/requests?book_id=${book_id}&user_id=${user_id}`
+        )
+        .then((response) => {
+          this.fetchRequests();
+          console.log(response.data);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    async acceptIssue(book_id, user_id) {
+      try {
+        const response = await axios.post(
+          "http://127.0.0.1:5000/push-content/issues",
+          {
+            book_id: book_id,
+            user_id: user_id,
+          }
+        );
+        this.rejectIssue(book_id, user_id);
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to Accept the Issue Request.");
+      }
+    },
+    async revokeIssue(book_id, user_id) {
+      try {
+        const response = await axios.put(
+          "http://127.0.0.1:5000/put-content/issues",
+          {
+            book_id: book_id,
+            user_id: user_id,
+          }
+        );
+        console.log("Success:", response.data);
+        this.fetchIssues();
+      } catch (error) {
+        alert(
+          "Unable to submit the feedback. Kindly try again or contact the librarian."
+        );
       }
     },
     fetchBooks() {
@@ -750,6 +885,26 @@ export default {
         .then((response) => {
           this.users = response.data;
           this.changePreviewUser(this.users[0].user_id);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchRequests() {
+      axios
+        .get("http://127.0.0.1:5000/get-librarian/requests")
+        .then((response) => {
+          this.allRequests = response.data;
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchIssues() {
+      axios
+        .get("http://127.0.0.1:5000/get-librarian/issues")
+        .then((response) => {
+          this.allIssues = response.data;
         })
         .catch(() => {
           this.$router.push("/error");
@@ -805,7 +960,7 @@ export default {
             }
           );
           console.log("Success:", response.data);
-          window.location.reload();
+          this.fetchBooks();
         } catch (error) {
           if (
             error.response &&
@@ -832,7 +987,7 @@ export default {
             }
           );
           console.log("Success:", response.data);
-          window.location.reload();
+          this.fetchSections();
         } catch (error) {
           console.log(error);
           if (
@@ -871,7 +1026,7 @@ export default {
             }
           );
           console.log("Success:", response.data);
-          window.location.reload();
+          this.fetchAuthors();
         } catch (error) {
           console.log(error);
           if (
@@ -1144,7 +1299,7 @@ export default {
           `http://127.0.0.1:5000/delete-content/books?book_id=${book_id}`
         );
         console.log("Success:", response.data);
-        window.location.reload();
+        this.fetchBooks();
       } catch (error) {
         alert("Unable to Delete the book. Kindly try again.");
       }
@@ -1155,7 +1310,7 @@ export default {
           `http://127.0.0.1:5000/delete-content/sections?section_id=${section_id}`
         );
         console.log("Success:", response.data);
-        window.location.reload();
+        this.fetchSections();
       } catch (error) {
         alert("Unable to Delete the section. Kindly try again.");
       }
@@ -1166,7 +1321,7 @@ export default {
           `http://127.0.0.1:5000/delete-content/authors?author_id=${author_id}`
         );
         console.log("Success:", response.data);
-        window.location.reload();
+        this.fetchAuthors();
       } catch (error) {
         alert("Unable to Delete the section. Kindly try again.");
       }
@@ -1413,8 +1568,12 @@ export default {
   width: 50%;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: 600;
+  /* font-weight: 600; */
   transition: all 0.2s ease;
+}
+.userActionBtns {
+  font-size: 1rem;
+  /* font-weight: 600; */
 }
 .actionBtnImg {
   height: 1.3rem;
@@ -1805,5 +1964,94 @@ export default {
   height: 80%;
   width: auto;
   margin-left: 0.3rem;
+}
+.directionColumn {
+  flex-direction: column;
+  align-items: center;
+  justify-content: start;
+  flex-wrap: nowrap;
+}
+.logHead {
+  display: flex;
+  flex-direction: row;
+  min-height: 3rem;
+  height: max-content;
+  width: 95%;
+}
+.logHead .issueRow {
+  color: rgb(96, 96, 96);
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+.whiteBg {
+  background: #ffffff;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  min-height: 4rem;
+}
+.whiteBg .issueRow {
+  color: rgb(23, 23, 23);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  /* height: 3.6rem; */
+}
+.issueRow {
+  display: flex;
+  /* justify-content: center; */
+  align-items: center;
+  padding: 0.5rem 1rem;
+  min-height: 100%;
+  height: max-content;
+  position: relative;
+}
+.whiteBg .issueRow::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 0;
+  border-right: 4px solid rgb(0, 0, 0);
+  border-radius: 100%;
+}
+.whiteBg .issueRow:last-child::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 0;
+  border-right: 0rem;
+}
+.snoRow {
+  width: 12%;
+}
+.titleRow {
+  width: 43%;
+}
+.userNameRow {
+  width: 25%;
+}
+.actionRow {
+  width: 20%;
+  justify-content: center;
+}
+.issueAction {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  border-radius: 0.5rem;
+  color: #e6ac45;
+  cursor: pointer;
+}
+.issueAction:first-child {
+  background: #25352b;
+  margin-right: 1rem;
+}
+.issueAction img {
+  margin-right: 0.5rem;
 }
 </style>

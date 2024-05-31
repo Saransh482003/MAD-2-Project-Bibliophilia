@@ -412,18 +412,16 @@ export default {
       console.log(`Reading ${book_id}`);
     },
     async returnBook(book_id) {
-      const today = new Date();
       try {
         const response = await axios.put(
           "http://127.0.0.1:5000/put-content/issues",
           {
             book_id: book_id,
             user_id: this.user_id,
-            dor: today,
           }
         );
         console.log("Success:", response.data);
-        window.location.reload();
+        this.fetchMyBooks();
       } catch (error) {
         alert(
           "Unable to submit the feedback. Kindly try again or contact the librarian."
