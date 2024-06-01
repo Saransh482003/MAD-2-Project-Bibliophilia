@@ -1,9 +1,12 @@
 <template>
-  <div class="dataCard">
+  <div
+    class="dataCard"
+    :style="`width:${cardWidth}!important; height:${cardHeight}!important`"
+  >
     <p class="dataCardHead">
       {{ cardHead }}
     </p>
-    <p class="dataCardValue">
+    <p class="dataCardValue" :style="`font-size:${fontSize}!important`">
       {{ cardValue }}
     </p>
   </div>
@@ -20,6 +23,21 @@ export default {
     cardValue: {
       type: String,
       required: true,
+    },
+    fontSize: {
+      type: String,
+      required: false,
+      default: "4rem",
+    },
+    cardWidth: {
+      type: String,
+      required: false,
+      default: "15.9rem",
+    },
+    cardHeight: {
+      type: String,
+      required: false,
+      default: "80%",
     },
   },
 };

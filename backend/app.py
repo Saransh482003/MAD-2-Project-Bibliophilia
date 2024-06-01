@@ -1,10 +1,11 @@
 from flask import Flask, jsonify, request, abort
-from sqlalchemy.sql.expression import func
+from sqlalchemy.sql.expression import func, desc, case
 from flask_cors import CORS
 from models import *
 import random
 import requests
 import math
+import calendar
 from datetime import date, datetime, timedelta
 from dateutil import parser
 
@@ -120,7 +121,7 @@ def getUsers():
     if args != {}:
         fetcher = Users.query.filter_by(**args).all()
     else:
-        fetcher = Users.query.offset(start).limit(200).all()
+        fetcher = Users.query.all()
 
     if fetcher:
         users_list = []
@@ -242,6 +243,33 @@ def getRequests():
                 "book_id": requester.book_id,
                 "user_id": requester.user_id,
                 "request_date": requester.request_date,
+            })
+        return request_list, 200
+    else:
+        abort(404)
+
+
+@app.route("/get-content/blacklists", methods=["GET"])
+def getBan():
+    args = request.args.to_dict()
+    if "start" in args:
+        del args["start"]
+    start = request.args.get('start', 0, type=int)
+
+    if args != {}:
+        fetcher = Blacklists.query.filter_by(**args).all()
+    else:
+        fetcher = Blacklists.query.offset(start).limit(500).all()
+
+    if fetcher:
+        request_list = []
+        for requester in fetcher:
+            request_list.append({
+                "sno": requester.sno,
+                "user_id": requester.user_id,
+                "ban_type": requester.ban_type,
+                "ban_date": requester.ban_date.strftime("%d %b %Y"),
+                "ban_end_date": (requester.ban_date + timedelta(days=30)).strftime("%d %b %Y"),
             })
         return request_list, 200
     else:
@@ -516,9 +544,10 @@ def getUserStatistics():
         fetchRating = requests.get(
             f"http://127.0.0.1:5000/get-content/ratings?user_id={user_id}")
         avg_rate = 0.0
-        if fetchRating.status_code==200:
+        if fetchRating.status_code == 200:
             fetchRating = fetchRating.json()
-            avg_rate = round(sum([float(i['rating']) for i in fetchRating])/len(fetchRating),1)
+            avg_rate = round(sum([float(i['rating'])
+                             for i in fetchRating])/len(fetchRating), 1)
         else:
             fetchRating = fetchRating.json()
         score = 100*len(fetchIssues) + 250*len(fetchRating)
@@ -550,7 +579,7 @@ def getUserStatistics():
             "Literati": 5000,
             "Scholar": 13750,
         }
-        return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssues),"numRequests": len(fetchRequests), "avg_rating": avg_rate}, 200
+        return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssues), "numRequests": len(fetchRequests), "avg_rating": avg_rate}, 200
     except:
         abort(404, description="No Statistics Available")
 
@@ -642,37 +671,138 @@ def getLibrarianAuthor():
 
 @app.route("/get-librarian/requests", methods=["GET"])
 def getLibrarianRequests():
-    requests = db.session.query(Requests, Books, Users).join(Books, Books.book_id == Requests.book_id).join(Users, Users.user_id == Requests.user_id).order_by(Requests.request_date.desc()).all()
+    requests = db.session.query(Requests, Books, Users).join(Books, Books.book_id == Requests.book_id).join(
+        Users, Users.user_id == Requests.user_id).order_by(Requests.request_date.desc()).all()
     allRequests = []
     for request, book, user in requests:
         allRequests.append({
             "sno": request.sno,
-            "book_id" : book.book_id,
-            "book_name" : book.book_name,
-            "user_id" : user.user_id,
-            "user_name" : user.user_name,
-            "request_date" : request.request_date.strftime("%d %b %Y"),
+            "book_id": book.book_id,
+            "book_name": book.book_name,
+            "user_id": user.user_id,
+            "user_name": user.user_name,
+            "request_date": request.request_date.strftime("%d %b %Y"),
         })
     return jsonify(allRequests), 200
 
 
 @app.route("/get-librarian/issues", methods=["GET"])
 def getLibrarianIssues():
-    requests = db.session.query(Issues, Books, Users).join(Books, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).order_by(Issues.doi.desc()).limit(100).all()
+    requests = db.session.query(Issues, Books, Users).join(Books, Books.book_id == Issues.book_id).join(
+        Users, Users.user_id == Issues.user_id).order_by(Issues.doi.desc()).limit(100).all()
     allIssues = []
-    now= datetime.now()
+    now = datetime.now()
     for issue, book, user in requests:
         allIssues.append({
             "sno": issue.sno,
-            "book_id" : book.book_id,
-            "book_name" : book.book_name,
-            "user_id" : user.user_id,
-            "user_name" : user.user_name,
-            "doi" : issue.doi.strftime("%d %b %Y"),
-            "dor" : issue.dor.strftime("%d %b %Y"),
+            "book_id": book.book_id,
+            "book_name": book.book_name,
+            "user_id": user.user_id,
+            "user_name": user.user_name,
+            "doi": issue.doi.strftime("%d %b %Y"),
+            "dor": issue.dor.strftime("%d %b %Y"),
             "current_issue": True if now < issue.dor else False
         })
     return jsonify(allIssues), 200
+
+
+@app.route("/get-librarian/current-user-issues")
+def getLibrarianCurrentIssues():
+    user_id = request.args.to_dict()["user_id"]
+    try:
+        requests = db.session.query(Issues).join(
+            Users, Users.user_id == Issues.user_id).filter(Users.user_id == user_id).all()
+        current_issues = 0
+        now = datetime.now()
+        for issue in requests:
+            if now < issue.dor:
+                current_issues += 1
+    except:
+        current_issues = 0
+
+    return jsonify({"count": current_issues}), 200
+
+# Librarian Dashboard Statistics
+
+
+@app.route("/get-statistics/librarian/users")
+def getStatisticsLibrarianUsers():
+    issue_scores = db.session.query(Users.user_id, Users.user_name, func.count(Issues.sno).label(
+        "issue_count")).join(Issues, Users.user_id == Issues.user_id).group_by(Users.user_id).all()
+    rating_scores = db.session.query(Users.user_id, Users.user_name, func.count(Ratings.sno).label(
+        "rating_count")).join(Ratings, Users.user_id == Ratings.user_id).group_by(Users.user_id).all()
+
+    user_scores = []
+    for issue, rating in zip(issue_scores, rating_scores):
+        user_scores.append({
+            "user_id": issue[0],
+            "user_name": issue[1],
+            "score": issue[2]*100 + rating[2]*250
+        })
+    scores = [i["score"] for i in user_scores]
+
+    league_count = {"Sage": 0, "Scholar": 0,
+                    "Literati": 0, "Reader": 0, "No": 0}
+    for i in user_scores:
+        scorer = i["score"]
+        rank = "Sage" if scorer >= 13750 else "Scholar" if scorer >= 5000 else "Literati" if scorer >= 1750 else "Reader" if scorer >= 500 else "No"
+        league_count[rank] += 1
+
+    gender_fetch = db.session.query(Users.gender, func.count(
+        Users.gender)).group_by(Users.gender).all()
+    gender_count = [[gender_fetch[0][0], gender_fetch[0][1]],
+                    [gender_fetch[1][0], gender_fetch[1][1]]]
+
+    day_offset = datetime.now() - timedelta(days=15)
+    dataValues = {
+        "total_users": len(issue_scores),
+        "total_active_users": Users.query.filter(Users.last_loged >= day_offset).count(),
+        "most_active_user": issue_scores[scores.index(max(scores))][1],
+        "banned_users": Blacklists.query.count()
+    }
+
+    active = db.session.query(
+        func.strftime("%Y-%m", Issues.request_date).label('month_year'),
+        func.count(Issues.sno).label('count'),
+    ).group_by(
+        func.strftime("%Y-%m", Issues.request_date)
+    ).order_by(
+        desc(func.strftime('%Y-%m', Issues.request_date))
+    ).limit(10)
+
+    month_dict = {
+        str(index): calendar.month_abbr[index] for index in range(1, 13)}
+    activity_data = [
+        [f"{month_dict[str(int(i[0][-2:]))]}'{i[0][:4]}", i[1]] for i in active]
+    return {"barData": activity_data[::-1], "pieData": gender_count, "dataValues": dataValues, "userLeague": league_count}, 200
+
+@app.route("/get-statistics/librarian/books")
+def getStatisticsLibrarianBooks():
+    genre_issues = db.session.query(Books.genre, func.count(Issues.sno).label(
+        "issue_count")).join(Issues, Books.book_id == Issues.book_id).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).limit(5).all()
+    male_genres = db.session.query(
+        Books.genre,
+        func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(Users.gender == "Male").group_by(Books.genre).order_by(desc(func.count(Issues.sno))).limit(5).all()  
+    female_genres = db.session.query(
+        Books.genre,
+        func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(Users.gender == "Female").group_by(Books.genre).order_by(desc(func.count(Issues.sno))).offset(3).limit(5).all()
+    
+    today = datetime.today()
+    year_diff = func.julianday(today) - func.julianday(Users.dob)
+    age = year_diff / 365.25
+
+    age_young = db.session.query(Books.genre,func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(age.between(15, 30)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).limit(5).all()
+    age_middle = db.session.query(Books.genre,func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(age.between(31, 60)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).offset(5).limit(5).all()
+    age_old = db.session.query(Books.genre,func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(age.between(61, 80)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).offset(3).limit(5).all()
+
+    dataValues = {
+        "most_issued":db.session.query(Books.img, (func.count(Issues.sno).label("issue_count"))).join(Issues, Books.book_id == Issues.book_id).group_by(Books.book_id).order_by(desc(func.count(Issues.sno))).limit(1).all()[0][0],
+        "most_rated":db.session.query(Books.img, (func.count(Ratings.sno).label("rating_count"))).join(Ratings, Books.book_id == Ratings.book_id).group_by(Books.book_id).order_by(desc(func.count(Ratings.sno))).limit(1).all()[0][0],
+        "highest_rated":db.session.query(Books.img, (func.avg(Ratings.rating).label("rating_avg"))).join(Ratings, Books.book_id == Ratings.book_id).group_by(Books.book_id).order_by(desc(func.avg(Ratings.rating))).offset(5).limit(1).all()[0][0],
+        "least_rated":db.session.query(Books.img, (func.avg(Ratings.rating).label("rating_avg"))).join(Ratings, Books.book_id == Ratings.book_id).filter(Ratings.rating>0).group_by(Books.book_id).order_by(func.avg(Ratings.rating)).offset(5).limit(1).all()[0][0],
+        "latest_book":db.session.query(Books.img).order_by(desc(Books.date_added)).limit(1).all()[0][0],
+    }
+    return {"general_genres":[[i[0],i[1]] for i in genre_issues], "male_genres":[[i[0],i[1]] for i in male_genres],"female_genres":[[i[0],i[1]] for i in female_genres], "age_young":[[i[0],i[1]] for i in age_young], "age_middle":[[i[0],i[1]] for i in age_middle], "age_old":[[i[0],i[1]] for i in age_old], "dataValues":dataValues}, 200
 
 
 # Data Insertion
@@ -850,9 +980,13 @@ def pushIssues():
                 sno=next_id,
                 book_id=form["book_id"],
                 user_id=form["user_id"],
-                request_date=datetime.now() if "request_date" not in form else datetime.strptime(form["request_date"], "%Y-%m-%d"),
-                doi=datetime.now() if "doi" not in form else datetime.strptime(form["doi"], "%Y-%m-%d"),
-                dor=datetime.now() + timedelta(days=7) if "dor" not in form else datetime.strptime(form["dor"], "%Y-%m-%d"),
+                request_date=datetime.now() if "request_date" not in form else datetime.strptime(
+                    form["request_date"], "%Y-%m-%d"),
+                doi=datetime.now() if "doi" not in form else datetime.strptime(
+                    form["doi"], "%Y-%m-%d"),
+                dor=datetime.now() +
+                timedelta(days=7) if "dor" not in form else datetime.strptime(
+                    form["dor"], "%Y-%m-%d"),
             )
             db.session.add(new_issue)
             db.session.commit()
@@ -878,6 +1012,24 @@ def pushRequests():
     return f"New Requests added Book ID: {form['book_id']} & User ID: {form['user_id']}", 200
     # else:
     #     abort(406)
+
+
+@app.route("/push-content/blacklists", methods=["GET", "POST"])
+def pushBan():
+    form = request.get_json()
+    roger = f"http://127.0.0.1:5000/get-content/blacklists?user_id={form['user_id']}"
+    fetcher = requests.get(roger)
+    if fetcher.status_code == 404:
+        new_ban = Blacklists(
+            user_id=form["user_id"],
+            ban_type=form["ban_type"],
+            ban_date=datetime.now(),
+        )
+        db.session.add(new_ban)
+        db.session.commit()
+        return f"New Ban added User ID: {form['user_id']}", 200
+    else:
+        abort(406)
 
 
 # Data Updation
@@ -984,11 +1136,29 @@ def putIssues():
         book_id=form["book_id"], user_id=form["user_id"]).first()
     if request.method == "PUT":
         if fetcher:
-            fetcher.dor = datetime.now() if "dor" not in form else datetime.strptime(form["dor"], "%Y-%m-%d")
+            fetcher.dor = datetime.now() if "dor" not in form else datetime.strptime(
+                form["dor"], "%Y-%m-%d")
             db.session.commit()
             return {"message": "Issues do not exists."}, 200
         else:
             return {"message": "Issues do not exists."}, 406
+
+
+@app.route("/put-content/blacklists", methods=["GET", "PUT"])
+def putBan():
+    form = request.get_json()
+    fetcher = Blacklists.query.filter_by(user_id=form["user_id"]).first()
+    if request.method == "PUT":
+        if fetcher:
+            for i in form:
+                try:
+                    setattr(fetcher, i, datetime.strptime(form[i], "%Y-%m-%d"))
+                except:
+                    setattr(fetcher, i, form[i])
+            db.session.commit()
+            return {"message": "Ban changed"}, 200
+        else:
+            return {"message": "Blacklists do not exists."}, 406
 
 
 # Data Deletion
@@ -1079,6 +1249,18 @@ def deleteRequests():
         return {"message": "Request do not exist"}, 406
 
 
+@app.route("/delete-content/blacklists", methods=["GET", "DELETE"])
+def deleteBan():
+    args = request.args.to_dict()
+    fetcher = Blacklists.query.filter_by(user_id=args["user_id"]).first()
+    if fetcher:
+        db.session.delete(fetcher)
+        db.session.commit()
+        return {"message": f"Ban with user id {args['user_id']} deleted"}, 200
+    else:
+        return {"message": "Ban do not exist"}, 406
+
+
 # Table Truncation
 @app.route('/delete-content/table', methods=["GET", "DELETE"])
 def delete_content():
@@ -1095,7 +1277,7 @@ def not_acceptable(e):
     return response
 
 # with app.app_context():
-#     Books.__table__.create(db.engine)
+#     Blacklists.__table__.create(db.engine)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 <template>
   <div class="navbar">
-    <router-link to="/" class="logo">
+    <router-link to="/librarian" class="logo">
       <div class="logoContainer">
         <img
           src="@/assets/images/Oak Png.png"

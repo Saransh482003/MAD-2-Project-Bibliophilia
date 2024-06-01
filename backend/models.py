@@ -63,3 +63,9 @@ class Requests(db.Model):
     user_id = db.Column(db.String, nullable=False)
     request_date = db.Column(db.DateTime, nullable=False, default = datetime.strftime(datetime.today(), "%d-%m-%Y"))
     __table_args__ = (db.UniqueConstraint('book_id', 'user_id', name='user_book_unique'),)
+
+class Blacklists(db.Model):
+    sno = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String, nullable=False)
+    ban_type = db.Column(db.String, nullable=False)
+    ban_date = db.Column(db.DateTime, nullable=False, default = datetime.strftime(datetime.today(), "%d-%m-%Y"))

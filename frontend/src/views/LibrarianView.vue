@@ -2,7 +2,131 @@
   <div class="middle">
     <SideNav @changeLibrarianView="changeMiddleView" page="librarian" />
 
-    <div class="mainPanel" v-if="changeView == 1">Dashboard</div>
+    <div class="mainPanel" v-if="changeView == 1">
+      <div class="statistics">
+        <div class="dashTabsContainer">
+          <div class="dashTab currentDashTab" @click="changeStatsTab(1)">
+            Users Statistics
+          </div>
+          <div class="dashTab" @click="changeStatsTab(2)">Books Statistics</div>
+          <div class="dashTab" @click="changeStatsTab(3)">
+            Authors Statistics
+          </div>
+        </div>
+        <div class="coreStatistics" v-if="statsTab == 1">
+          <div class="dashRow">
+            <div class="userBarChart">
+              <BarChartView
+                :barData="userStatsData.barData"
+                class="chartView"
+              />
+            </div>
+            <div class="userDataValues">
+              <DataCards
+                cardHead="Total Users"
+                :cardValue="userStatsData.dataValues.total_users"
+                fontSize="2.5rem"
+                cardWidth="14rem"
+                cardHeight="8rem"
+              />
+              <DataCards
+                cardHead="Active Users"
+                :cardValue="userStatsData.dataValues.total_active_users"
+                fontSize="2.5rem"
+                cardWidth="14rem"
+                cardHeight="8rem"
+              />
+              <DataCards
+                cardHead="Most Active User"
+                :cardValue="userStatsData.dataValues.most_active_user"
+                fontSize="2rem"
+                cardWidth="14rem"
+                cardHeight="8rem"
+              />
+              <DataCards
+                cardHead="# Banned Users"
+                :cardValue="userStatsData.dataValues.banned_users"
+                fontSize="2.5rem"
+                cardWidth="14rem"
+                cardHeight="8rem"
+              />
+            </div>
+          </div>
+          <div class="dashRow">
+            <div class="leagueStats">
+              <div class="leagueStatsHead">User League Distribution</div>
+              <div class="leagueDivCont">
+                <div class="leagueDiv">
+                  <p class="leagueName">No League</p>
+                  <div class="leagueLogoCont"></div>
+                  <p class="leagueStat">{{ userStatsData.userLeague.No }}</p>
+                </div>
+                <div class="leagueDiv">
+                  <p class="leagueName">Reader League</p>
+                  <div class="leagueLogoCont">
+                    <img
+                      src="@/assets/images/Reader_logo.png"
+                      alt="Reader logo"
+                      class="leagueLogo"
+                    />
+                  </div>
+                  <p class="leagueStat">
+                    {{ userStatsData.userLeague.Reader }}
+                  </p>
+                </div>
+                <div class="leagueDiv">
+                  <p class="leagueName">Literati League</p>
+                  <div class="leagueLogoCont">
+                    <img
+                      src="@/assets/images/Literati_logo.png"
+                      alt="Literati logo"
+                      class="leagueLogo"
+                    />
+                  </div>
+                  <p class="leagueStat">
+                    {{ userStatsData.userLeague.Literati }}
+                  </p>
+                </div>
+                <div class="leagueDiv">
+                  <p class="leagueName">Scholar League</p>
+                  <div class="leagueLogoCont">
+                    <img
+                      src="@/assets/images/Scholar_logo.png"
+                      alt="Scholar logo"
+                      class="leagueLogo"
+                    />
+                  </div>
+                  <p class="leagueStat">
+                    {{ userStatsData.userLeague.Scholar }}
+                  </p>
+                </div>
+                <div class="leagueDiv">
+                  <p class="leagueName">Sage League</p>
+                  <div class="leagueLogoCont">
+                    <img
+                      src="@/assets/images/Sage_logo.png"
+                      alt=""
+                      class="leagueLogo"
+                    />
+                  </div>
+                  <p class="leagueStat">{{ userStatsData.userLeague.Sage }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="userGenders">
+              <PieChartView
+                :pieData="userStatsData.pieData"
+                class="chartView"
+              />
+            </div>
+          </div>
+        </div>
+        <LibrarianBooksStats
+          :bookStatsData="bookStatsData"
+          v-if="statsTab == 2"
+        />
+      </div>
+    </div>
     <div class="mainPanel" v-if="changeView == 2">Search</div>
     <div class="mainPanel directionColumn" v-if="changeView == 3">
       <div class="headBookTitleContainer">
@@ -32,7 +156,7 @@
               alt=""
               class="actionBtnImg"
             />
-            Issues
+            Issue
           </div>
           <div
             class="issueAction"
@@ -701,14 +825,26 @@
           class="actionBtns userActionBtns"
           title="Permanent Ban"
           @click="banUser(previewUser.user_id)"
+          v-if="banData.ban_type != 'Perma'"
         >
           <img src="@/assets/images/ban-icon.png" alt="" class="actionBtnImg" />
           Ban
         </div>
         <div
+          class="actionBtns userActionBtns revokeBan"
+          title="Permanent Ban"
+          @click="revokeBan(previewUser.user_id)"
+          v-else
+        >
+          <img src="@/assets/images/ban-icon.png" alt="" class="actionBtnImg" />
+          Un-Ban
+        </div>
+
+        <div
           class="actionBtns userActionBtns sideBtn"
           title="Temporary Ban for 30 Days"
           @click="interdictUser(previewUser.user_id)"
+          v-if="banData.ban_type != 'Temp'"
         >
           <img
             src="@/assets/images/Interdict-icon.png"
@@ -716,6 +852,19 @@
             class="actionBtnImg"
           />
           Interdict
+        </div>
+        <div
+          class="actionBtns userActionBtns sideBtn"
+          :title="`To be lifted on ${banData.ban_end_date}`"
+          @click="revokeInterdict(previewUser.user_id)"
+          v-else
+        >
+          <img
+            src="@/assets/images/Interdict-icon.png"
+            alt=""
+            class="actionBtnImg"
+          />
+          De-Interdict
         </div>
       </div>
     </div>
@@ -725,11 +874,24 @@
 <script>
 import axios from "axios";
 import SideNav from "@/components/SideNav.vue";
+import BarChartView from "@/components/BarChartView.vue";
+import PieChartView from "@/components/PieChartView.vue";
+import DataCards from "@/components/DataCards.vue";
+import LibrarianBooksStats from "@/components/LibrarianBooksStats.vue";
 export default {
-  components: { SideNav },
+  components: {
+    SideNav,
+    BarChartView,
+    PieChartView,
+    DataCards,
+    LibrarianBooksStats,
+  },
   name: "LibrarianView",
   data() {
     return {
+      statsTab: 1,
+      userStatsData: {},
+      bookStatsData: {},
       searchBooks: [],
       books: [],
       sections: [],
@@ -744,6 +906,7 @@ export default {
       userStats: {},
       allRequests: [],
       allIssues: [],
+      banData: {},
       changeView: 1,
       isTitleEdit: false,
       isAuthorEdit: false,
@@ -783,11 +946,16 @@ export default {
   },
   created() {
     this.changeView = 1;
+    this.statsTab = 1;
+    this.fetchUsersStats();
+    this.fetchBooksStats();
   },
   methods: {
     changeMiddleView(view) {
       this.changeView = view;
-      if (view == 3) {
+      if (view == 1) {
+        this.fetchUsersStats();
+      } else if (view == 3) {
         this.fetchRequests();
       } else if (view == 4) {
         this.fetchIssues();
@@ -799,6 +967,83 @@ export default {
         this.fetchAuthors();
       } else if (view == 8) {
         this.fetchUsers();
+      }
+    },
+    changeStatsTab(tab) {
+      this.statsTab = tab;
+    },
+    fetchBooksStats() {
+      axios
+        .get(`http://127.0.0.1:5000/get-statistics/librarian/books`)
+        .then((response) => {
+          this.bookStatsData = response.data;
+          console.log(this.bookStatsData);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    fetchUsersStats() {
+      axios
+        .get(`http://127.0.0.1:5000/get-statistics/librarian/users`)
+        .then((response) => {
+          this.userStatsData = response.data;
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    async banUser(user_id) {
+      try {
+        const response = await axios.post(
+          "http://127.0.0.1:5000/push-content/blacklists",
+          {
+            user_id: user_id,
+            ban_type: "Perma",
+          }
+        );
+        console.log("Success:", response.data);
+        this.changePreviewUser(user_id);
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to Ban the User.");
+      }
+    },
+    async revokeBan(user_id) {
+      try {
+        const response = await axios.delete(
+          `http://127.0.0.1:5000/delete-content/blacklists?user_id=${user_id}`
+        );
+        this.changePreviewUser(user_id);
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to Revoke Ban the User.");
+      }
+    },
+    async interdictUser(user_id) {
+      try {
+        const response = await axios.post(
+          "http://127.0.0.1:5000/push-content/blacklists",
+          {
+            user_id: user_id,
+            ban_type: "Temp",
+          }
+        );
+        this.changePreviewUser(user_id);
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to Ban the User.");
+      }
+    },
+    async revokeInterdict(user_id) {
+      try {
+        const response = await axios.delete(
+          `http://127.0.0.1:5000/delete-content/blacklists?user_id=${user_id}`
+        );
+        this.changePreviewUser(user_id);
+        console.log("Success:", response.data);
+      } catch (error) {
+        alert("Unable to Revoke Interdict the User.");
       }
     },
     rejectIssue(book_id, user_id) {
@@ -816,19 +1061,33 @@ export default {
     },
     async acceptIssue(book_id, user_id) {
       try {
-        const response = await axios.post(
-          "http://127.0.0.1:5000/push-content/issues",
-          {
-            book_id: book_id,
-            user_id: user_id,
-          }
+        const responser = await axios.get(
+          `http://127.0.0.1:5000/get-librarian/current-user-issues?user_id=${user_id}`
         );
-        this.rejectIssue(book_id, user_id);
-        console.log("Success:", response.data);
+        if (responser.data.count + 1 <= 5) {
+          try {
+            const response = await axios.post(
+              "http://127.0.0.1:5000/push-content/issues",
+              {
+                book_id: book_id,
+                user_id: user_id,
+              }
+            );
+            this.rejectIssue(book_id, user_id);
+            console.log("Success:", response.data);
+          } catch (error) {
+            alert("Unable to Accept the Issue Request.");
+          }
+        } else {
+          alert(
+            "User already above Issue limit. Either Reject this request or Revoke Issue for some of the Already Issued."
+          );
+        }
       } catch (error) {
-        alert("Unable to Accept the Issue Request.");
+        this.$router.push("/error");
       }
     },
+
     async revokeIssue(book_id, user_id) {
       try {
         const response = await axios.put(
@@ -1400,6 +1659,20 @@ export default {
                 avg_rating: 0.0,
               };
             });
+
+          axios
+            .get(
+              `http://127.0.0.1:5000/get-content/blacklists?user_id=${user_id}`
+            )
+            .then((response) => {
+              this.banData["ban_type"] = response.data[0].ban_type;
+              this.banData["ban_date"] = response.data[0].ban_date;
+              this.banData["ban_end_date"] = response.data[0].ban_end_date;
+            })
+            .catch(() => {
+              this.banData["ban_type"] = "none";
+            });
+          console.log(this.banData);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -2053,5 +2326,187 @@ export default {
 }
 .issueAction img {
   margin-right: 0.5rem;
+}
+.dashRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: max-content;
+  width: 100%;
+  margin: 0rem 1.5rem;
+  /* margin-bottom: rem; */
+}
+.statistics {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: max-content;
+}
+.userBarChart {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 60%;
+  height: 25rem;
+  padding: 1rem 0rem;
+  position: relative;
+  z-index: 3;
+  /* background-color: white;
+  padding: 1rem 2rem; */
+  /* background-color: #e6ac45; */
+}
+.userBarChart::before {
+  content: "Past 12 Months Activity";
+  padding-right: 1rem;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 1.5rem;
+  color: rgb(61, 61, 61);
+  display: flex;
+  justify-content: center;
+  align-items: start;
+  top: 0;
+  left: auto;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  z-index: 4;
+}
+.coreStatistics {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0rem 1.4rem;
+}
+.myBooksHead {
+  margin: 0.5rem 2.4rem;
+  color: rgb(61, 61, 61);
+  font-weight: 700;
+}
+.userDataValues {
+  display: flex;
+  flex-direction: row;
+  /* justify-content: center; */
+  align-items: center;
+  flex-wrap: wrap;
+  width: 40%;
+  height: 25rem;
+}
+.leagueStats {
+  display: flex;
+  flex-direction: column;
+  width: 60%;
+  height: 18rem;
+  border-radius: 1rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.userGenders {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40%;
+  height: 20rem;
+  padding: 1rem 0rem;
+  padding-right: 2rem;
+  position: relative;
+  z-index: 3;
+}
+.userGenders::before {
+  content: "Genders";
+  padding-right: 1rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: rgb(61, 61, 61);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  top: 0;
+  left: auto;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  z-index: 4;
+}
+.leagueStatsHead {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.3rem 0rem;
+  margin: 1rem 0rem;
+  height: 3rem;
+  width: 100%;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.leagueDivCont {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 17rem;
+  margin: 1rem 0rem;
+}
+.leagueDiv {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20%;
+  height: 16rem;
+}
+.leagueLogoCont {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 6rem;
+  width: 6rem;
+  border-radius: 10rem;
+  background-color: #25352b;
+  padding: 1rem;
+  margin: 1rem 0rem;
+}
+.leagueName {
+  color: rgb(96, 96, 96);
+  font-size: 0.9rem;
+  font-style: italic;
+  padding: 0rem 0.2rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+.leagueStat {
+  font-weight: 600;
+}
+.dashTabsContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0rem 2rem;
+  height: 5rem;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.dashTab {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 15rem;
+  height: 70%;
+  color: rgb(0, 0, 0);
+  cursor: pointer;
+  font-weight: 500;
+  /* letter-spacing: 0.8px; */
+  margin: 0rem 1rem;
+  border: 3px solid white;
+  border-radius: 1rem;
+  border: 4px solid white;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+.currentDashTab {
+  background: linear-gradient(270deg, rgb(121, 241, 164), rgb(71, 171, 168));
+  color: white;
 }
 </style>
