@@ -5,11 +5,22 @@
     <div class="mainPanel" v-if="changeView == 1">
       <div class="statistics">
         <div class="dashTabsContainer">
-          <div class="dashTab currentDashTab" @click="changeStatsTab(1)">
+          <div
+            :class="`dashTab ${statsTab == 1 ? 'currentDashTab' : ''}`"
+            @click="changeStatsTab(1)"
+          >
             Users Statistics
           </div>
-          <div class="dashTab" @click="changeStatsTab(2)">Books Statistics</div>
-          <div class="dashTab" @click="changeStatsTab(3)">
+          <div
+            :class="`dashTab ${statsTab == 2 ? 'currentDashTab' : ''}`"
+            @click="changeStatsTab(2)"
+          >
+            Books Statistics
+          </div>
+          <div
+            :class="`dashTab ${statsTab == 3 ? 'currentDashTab' : ''}`"
+            @click="changeStatsTab(3)"
+          >
             Authors Statistics
           </div>
         </div>
@@ -115,6 +126,7 @@
             </div>
             <div class="userGenders">
               <PieChartView
+                style="margin-right: 2rem"
                 :pieData="userStatsData.pieData"
                 class="chartView"
               />
@@ -971,6 +983,11 @@ export default {
     },
     changeStatsTab(tab) {
       this.statsTab = tab;
+      const elements = document.querySelectorAll("dashTab");
+      elements.forEach((ele) => {
+        ele.classList.remove("currentDashtab");
+      });
+      this.$refs[`tab${tab}`].classList.add("currentDashtab");
     },
     fetchBooksStats() {
       axios
@@ -2411,14 +2428,15 @@ export default {
   height: 20rem;
   padding: 1rem 0rem;
   padding-right: 2rem;
+  margin: 0rem 1rem;
   position: relative;
   z-index: 3;
 }
 .userGenders::before {
   content: "Genders";
-  padding-right: 1rem;
+  padding-right: 1.8rem;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.8rem;
   color: rgb(61, 61, 61);
   display: flex;
   justify-content: center;

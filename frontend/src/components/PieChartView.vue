@@ -111,8 +111,8 @@ export default {
   align-items: center;
   width: 100%;
   height: 100%;
-  margin: 0rem 1rem;
-  margin-right: 2rem;
+  /* margin: 0rem 1rem; */
+  padding: 1rem;
   border-radius: 1rem;
   box-shadow: 0 0.25rem 1rem #00000026;
   backdrop-filter: blur(30px);
