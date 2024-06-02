@@ -32,7 +32,7 @@
         </div>
       </div>
       <div class="dataCards">
-        <div class="dataCardTitle">Least Rated</div>
+        <div class="dataCardTitle">Lowest Rated</div>
         <div class="cardImgContaiener">
           <img
             :src="bookStatsData.dataValues.least_rated"
@@ -150,11 +150,11 @@ export default {
   z-index: 3;
 }
 .bookPies::before {
-  content: "Genres";
+  content: "Genre Count";
   /* padding-right: 1rem; */
   width: 30%;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: rgb(61, 61, 61);
   display: flex;
   flex-wrap: wrap;
@@ -205,8 +205,8 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 90%;
-  width: 90%;
+  height: 17rem;
+  width: 17rem;
   padding-bottom: 1rem;
   overflow: hidden;
 }

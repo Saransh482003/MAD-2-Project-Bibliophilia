@@ -1,7 +1,7 @@
 <template>
   <div id="app">
-    <AppNavbar gender="male" v-if="$route.name !== 'librarian'" />
-    <LibrarianNavbar v-else />
+    <AppNavbar gender="male" v-if="!no_nav.includes($route.name)" />
+    <LibrarianNavbar v-else-if="$route.name !== 'signin'" />
     <router-view />
   </div>
 </template>
@@ -46,6 +46,11 @@ export default {
   components: {
     AppNavbar,
     LibrarianNavbar,
+  },
+  data() {
+    return {
+      no_nav: ["librarian", "signin"],
+    };
   },
 };
 </script>

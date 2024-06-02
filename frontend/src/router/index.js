@@ -5,6 +5,7 @@ import HomeView from "../views/HomeView.vue";
 import AboutView from "../views/AboutView.vue";
 import MyBooksView from "../views/MyBooksView.vue";
 import LibrarianView from "../views/LibrarianView.vue";
+import UserSignin from "../views/UserSignin.vue";
 
 Vue.use(VueRouter);
 
@@ -33,6 +34,11 @@ const routes = [
     path: "/librarian",
     name: "librarian",
     component: LibrarianView,
+  },
+  {
+    path: "/signin",
+    name: "signin",
+    component: UserSignin,
   },
 ];
 

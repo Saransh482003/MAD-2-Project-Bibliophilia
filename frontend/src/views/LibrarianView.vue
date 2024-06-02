@@ -137,9 +137,321 @@
           :bookStatsData="bookStatsData"
           v-if="statsTab == 2"
         />
+        <LibrarianAuthorsStats
+          :authorsStatsData="authorsStatsData"
+          v-if="statsTab == 3"
+        />
       </div>
     </div>
-    <div class="mainPanel" v-if="changeView == 2">Search</div>
+    <div class="mainPanel withPreview" v-if="changeView == 2">
+      <div class="searchCont">
+        <div class="searchbox">
+          <input
+            type="text"
+            class="search"
+            @change="bookSearcher()"
+            id="searchbox"
+            placeholder="Enter your search keyword"
+          />
+        </div>
+      </div>
+
+      <div class="headBookTitleContainer" v-if="searchBooks.titles.length > 0">
+        <div class="headBookTitle">Search by Titles</div>
+      </div>
+      <div
+        v-for="(book, index) in searchBooks.titles"
+        :key="index"
+        class="card myCard"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+        <div class="actions">
+          <div
+            class="actionBtns"
+            @click="confirmDelete(book.book_id, book.book_name)"
+          >
+            <img
+              src="@/assets/images/delete-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Delete
+          </div>
+          <div
+            class="actionBtns sideBtn"
+            @click="changePreviewBook(book.book_id)"
+          >
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Edit
+          </div>
+        </div>
+      </div>
+      <div class="headBookTitleContainer" v-if="searchBooks.authors.length > 0">
+        <div class="headBookTitle">Search by Authors</div>
+      </div>
+      <div
+        v-for="(book, index) in searchBooks.authors"
+        :key="index"
+        class="card myCard"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+        <div class="actions">
+          <div
+            class="actionBtns"
+            @click="confirmDelete(book.book_id, book.book_name)"
+          >
+            <img
+              src="@/assets/images/delete-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Delete
+          </div>
+          <div
+            class="actionBtns sideBtn"
+            @click="changePreviewBook(book.book_id)"
+          >
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Edit
+          </div>
+        </div>
+      </div>
+      <div
+        class="headBookTitleContainer"
+        v-if="searchBooks.sections.length > 0"
+      >
+        <div class="headBookTitle">Search by Sections</div>
+      </div>
+      <div
+        v-for="(book, index) in searchBooks.sections"
+        :key="index"
+        class="card myCard"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+        <div class="actions">
+          <div
+            class="actionBtns"
+            @click="confirmDelete(book.book_id, book.book_name)"
+          >
+            <img
+              src="@/assets/images/delete-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Delete
+          </div>
+          <div
+            class="actionBtns sideBtn"
+            @click="changePreviewBook(book.book_id)"
+          >
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Edit
+          </div>
+        </div>
+      </div>
+      <div class="headBookTitleContainer" v-if="searchBooks.genres.length > 0">
+        <div class="headBookTitle">Search by Genres</div>
+      </div>
+      <div
+        v-for="(book, index) in searchBooks.genres"
+        :key="index"
+        class="card myCard"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+        <div class="actions">
+          <div
+            class="actionBtns"
+            @click="confirmDelete(book.book_id, book.book_name)"
+          >
+            <img
+              src="@/assets/images/delete-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Delete
+          </div>
+          <div
+            class="actionBtns sideBtn"
+            @click="changePreviewBook(book.book_id)"
+          >
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt=""
+              class="actionBtnImg"
+            />
+            Edit
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="previewPanel" v-if="changeView == 2 && !addBookPallet">
+      <div class="previewDetailsContainer">
+        <div class="previewImgContainer">
+          <img :src="previewBook.book.img" alt="" class="imgContainer" />
+        </div>
+        <div class="titleDiv" v-if="!isTitleEdit">
+          <p class="previewTitle">
+            {{ previewBook.book.book_name }}
+          </p>
+          <img
+            src="@/assets/images/edit-icon.png"
+            alt=""
+            class="editActions"
+            @click="editTitle()"
+          />
+        </div>
+
+        <div class="previewTitleEdit" v-else>
+          <input
+            v-model="titleNew"
+            @keyup.enter="isTitleEdit = false"
+            @blur="handleTitleBlur"
+            ref="titleInput"
+          />
+          <img
+            src="@/assets/images/tick-icon.png"
+            alt="Edit Title"
+            title="Edit Title"
+            class="editActions"
+            @mousedown.prevent="saveTitle"
+          />
+        </div>
+
+        <div class="majorDetails">
+          <p v-if="!isAuthorEdit">
+            AUTHOR: <span>{{ previewBook.book.author_name }}</span>
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt="Edit Author"
+              title="Edit Author"
+              class="editActions"
+              @click="editAuthor()"
+            />
+          </p>
+          <div class="editable" v-else>
+            AUTHOR:
+            <input
+              v-model="authorNew"
+              @keyup.enter="isAuthorEdit = false"
+              @blur="handleAuthorBlur"
+              ref="authorInput"
+            />
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt="Edit Author"
+              title="Edit Author"
+              class="editActions"
+              @mousedown.prevent="saveAuthor"
+            />
+          </div>
+          <p v-if="!isGenreEdit">
+            GENRE: <span>{{ previewBook.book.genre }}</span>
+            <img
+              src="@/assets/images/edit-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @click="editGenre()"
+            />
+          </p>
+          <div class="editable" v-else>
+            GENRE:
+            <input
+              v-model="genreNew"
+              @keyup.enter="isGenreEdit = false"
+              @blur="handleGenreBlur"
+              ref="genreInput"
+            />
+            <img
+              src="@/assets/images/tick-icon.png"
+              alt="Edit Genre"
+              title="Edit Genre"
+              class="editActions"
+              @mousedown.prevent="saveGenre"
+            />
+          </div>
+
+          <p>DESCRIPTION:</p>
+          <p>
+            <span style="margin-left: 0rem"
+              >Lorem ipsum dolor sit amet consectetur adipisicing elit.
+              Cupiditate repellendus quae similique natus in blanditiis
+              doloribus facer?</span
+            >
+          </p>
+        </div>
+        <div class="bookStats">
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ previewBook.issues }}</div>
+            <p class="bookStatTitle"># Issues</p>
+          </div>
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ previewBook.requests }}</div>
+            <p class="bookStatTitle"># Requests</p>
+          </div>
+          <div class="bookStatOption">
+            <div class="bookStatData">{{ previewBook.avg_rating }}</div>
+            <p class="bookStatTitle">Avg. Rating</p>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="mainPanel directionColumn" v-if="changeView == 3">
       <div class="headBookTitleContainer">
         <div class="headBookTitle">Issue Requests</div>
@@ -890,6 +1202,7 @@ import BarChartView from "@/components/BarChartView.vue";
 import PieChartView from "@/components/PieChartView.vue";
 import DataCards from "@/components/DataCards.vue";
 import LibrarianBooksStats from "@/components/LibrarianBooksStats.vue";
+import LibrarianAuthorsStats from "@/components/LibrarianAuthorsStats.vue";
 export default {
   components: {
     SideNav,
@@ -897,6 +1210,7 @@ export default {
     PieChartView,
     DataCards,
     LibrarianBooksStats,
+    LibrarianAuthorsStats,
   },
   name: "LibrarianView",
   data() {
@@ -904,7 +1218,13 @@ export default {
       statsTab: 1,
       userStatsData: {},
       bookStatsData: {},
-      searchBooks: [],
+      authorsStatsData: {},
+      searchBooks: {
+        titles: [],
+        authors: [],
+        sections: [],
+        genres: [],
+      },
       books: [],
       sections: [],
       authors: [],
@@ -954,6 +1274,7 @@ export default {
       createAuthorDOD: "",
       createAuthorCountry: "",
       createAuthorRating: "",
+      selectedBookId: null,
     };
   },
   created() {
@@ -961,12 +1282,23 @@ export default {
     this.statsTab = 1;
     this.fetchUsersStats();
     this.fetchBooksStats();
+    this.fetchAuthorsStats();
+  },
+  watch: {
+    keyword(newKeyword) {
+      this.bookSearcher(newKeyword);
+    },
+    selectedBookId(newBookId) {
+      this.changePreviewBook(newBookId);
+    },
   },
   methods: {
     changeMiddleView(view) {
       this.changeView = view;
       if (view == 1) {
         this.fetchUsersStats();
+      } else if (view == 2) {
+        this.fetchLatest();
       } else if (view == 3) {
         this.fetchRequests();
       } else if (view == 4) {
@@ -981,6 +1313,54 @@ export default {
         this.fetchUsers();
       }
     },
+    fetchLatest() {
+      axios
+        .get(`http://127.0.0.1:5000/get-content/latestBooks`)
+        .then((response) => {
+          this.searchBooks = {
+            titles: [],
+            authors: [],
+            sections: [],
+            genres: [],
+          };
+          this.changePreviewBook(response.data[0].book_id);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
+    },
+    bookSearcher() {
+      let keyword = document.getElementById("searchbox").value;
+      axios
+        .get(`http://127.0.0.1:5000/search-content?keyword=${keyword}`, {
+          params: {
+            keyword: keyword,
+          },
+        })
+        .then((response) => {
+          this.searchBooks = {
+            titles: [],
+            authors: [],
+            sections: [],
+            genres: [],
+          };
+          this.searchBooks.titles = response.data.titles;
+          this.searchBooks.authors = response.data.authors;
+          this.searchBooks.genres = response.data.genres;
+          this.searchBooks.sections = response.data.sections;
+          console.log(this.searchBooks);
+          if (this.searchBooks.titles.length != 0) {
+            this.changePreviewBook(this.searchBooks.titles[0].book_id);
+          } else if (this.searchBooks.authors.length != 0) {
+            this.changePreviewBook(this.searchBooks.authors[0].book_id);
+          } else if (this.searchBooks.sections.length != 0) {
+            this.changePreviewBook(this.searchBooks.sections[0].book_id);
+          } else if (this.searchBooks.genres.length != 0) {
+            this.changePreviewBook(this.searchBooks.genres[0].book_id);
+          }
+        })
+        .catch(() => {});
+    },
     changeStatsTab(tab) {
       this.statsTab = tab;
       const elements = document.querySelectorAll("dashTab");
@@ -988,6 +1368,24 @@ export default {
         ele.classList.remove("currentDashtab");
       });
       this.$refs[`tab${tab}`].classList.add("currentDashtab");
+      if (tab == 1) {
+        this.fetchUsersStats();
+      } else if (tab == 2) {
+        this.fetchBooksStats();
+      } else if (tab == 3) {
+        this.fetchAuthorsStats();
+      }
+    },
+    fetchAuthorsStats() {
+      axios
+        .get(`http://127.0.0.1:5000/get-statistics/librarian/authors`)
+        .then((response) => {
+          this.authorsStatsData = response.data;
+          console.log(this.bookStatsData);
+        })
+        .catch(() => {
+          this.$router.push("/error");
+        });
     },
     fetchBooksStats() {
       axios
@@ -2526,5 +2924,35 @@ export default {
 .currentDashTab {
   background: linear-gradient(270deg, rgb(121, 241, 164), rgb(71, 171, 168));
   color: white;
+}
+.searchCont {
+  display: flex;
+  margin-top: 0.3rem;
+  margin-bottom: 1rem;
+  width: 100%;
+  height: 4rem;
+}
+.searchbox {
+  display: flex;
+  align-items: center;
+  width: 40%;
+  background-color: #111914;
+  border-top-right-radius: 10rem;
+  border-bottom-right-radius: 10rem;
+}
+.search {
+  margin: 1rem 1rem;
+  margin-right: 2rem;
+  caret-shape: bar;
+  caret-color: #e6ac45;
+  padding: 0.3rem 0.3rem;
+  color: #e6ac45;
+  font-weight: 700;
+  letter-spacing: 1px;
+  width: 100%;
+  outline: none;
+  border: 0rem;
+  background-color: #111914;
+  border-bottom: 3px solid #e6ac45;
 }
 </style>

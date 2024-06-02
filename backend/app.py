@@ -365,11 +365,21 @@ def getRecentBook():
 @app.route("/search-content", methods=["GET"])
 def searchBooks():
     keyword = request.args.to_dict()['keyword']
-    fetcher = Books.query.filter(
-        Books.book_name.like(f"%{keyword}%")).limit(500).all()
-    if fetcher:
+    fetcherBooks = Books.query.filter(
+        Books.book_name.like(f"%{keyword}%")).limit(100).all()
+    fetcherAuthors = Books.query.filter(
+        Books.author_name.like(f"%{keyword}%")).limit(100).all()
+    fetcherSections = db.session.query(Books).join(Sections, Books.section_id == Sections.section_id).filter(
+        Sections.section_name.like(f"%{keyword}%")).limit(100).all()
+    fetcherGenre = Books.query.filter(
+        Books.genre.like(f"%{keyword}%")).limit(100).all()
+
+    byParts = {"titles": fetcherBooks, "authors": fetcherAuthors,
+               "sections": fetcherSections, "genres": fetcherGenre}
+    allData = {}
+    for part in byParts:
         books_list = []
-        for book in fetcher:
+        for book in byParts[part]:
             books_list.append({
                 "book_id": book.book_id,
                 "book_name": book.book_name,
@@ -380,9 +390,9 @@ def searchBooks():
                 "genre": book.genre,
                 "date_added": book.date_added.strftime('%d %b %Y'),
             })
-        return books_list, 200
-    else:
-        abort(404)
+        allData[part] = books_list
+    print(allData)
+    return allData, 200
 
 
 @app.route("/search-content/my-books", methods=["GET"])
@@ -469,119 +479,80 @@ def randomBooks():
 
 @app.route("/get-statistics", methods=["GET"])
 def getUserStatistics():
-    try:
-        user_id = request.args.to_dict()["user_id"]
+    user_id = request.args.to_dict()["user_id"]
 
-        fetchRequests = Requests.query.order_by(
-            Requests.request_date.desc()).filter_by(user_id=user_id).all()
-        fetchIssues = Issues.query.order_by(
-            Issues.request_date.desc()).filter_by(user_id=user_id).all()
+    fetchRequests = db.session.query(func.strftime("%Y-%m", Requests.request_date).label('month_year'), func.count(Requests.sno)).filter(
+        Requests.user_id == user_id).group_by(func.strftime("%Y-%m", Requests.request_date)).order_by(desc(func.strftime('%Y-%m', Requests.request_date))).limit(10).all()
+    fetchIssues = db.session.query(func.strftime("%Y-%m", Issues.request_date).label('month_year'), func.count(Issues.sno)).filter(
+        Issues.user_id == user_id).group_by(func.strftime("%Y-%m", Issues.request_date)).order_by(desc(func.strftime('%Y-%m', Issues.request_date))).limit(10).all()
+    fetchIssueDict = {i[0]: i[1] for i in fetchIssues}
+    month_dict = {index: calendar.month_abbr[index] for index in range(1, 13)}
+    for i in fetchRequests:
+        fetchIssueDict[i[0]] += i[1]
+    barData = [[f"{month_dict[int(i[-2:])]}'{i[2:4]}", fetchIssueDict[i]]
+               for i in fetchIssueDict]
 
-        fetchData = [i for i in fetchRequests]
-        fetchData.extend([i for i in fetchIssues])
-        dates = [[i.request_date.strftime(
-            '%b'), i.request_date.year] for i in fetchData]
-        year = sorted(list(set([i[1] for i in dates])))[::-1]
-        barData = {}
-        for i in year:
-            months = [j[0] for j in dates if j[1] == i]
-            monDict = {i: months.count(i) for i in months[::-1]}
-            barData[i] = monDict
+    fetchUser = db.session.query(Users.user_name, Users.last_loged,
+                                 Users.doj, Users.email).filter(Users.user_id == user_id).first()
+    user_data = {
+        "user_name": fetchUser[0],
+        "last_loged": fetchUser[1].strftime("%d %b %Y"),
+        "doj": fetchUser[2].strftime("%d %b %Y"),
+        "email": fetchUser[3],
+    }
 
-        finalBarData = []
-        counter = 0
-        for i in barData:
-            for j in dict(reversed(list(barData[i].items()))):
-                if counter < 10:
-                    finalBarData.append([f"{j}'{i%100}", barData[i][j]])
-                    counter += 1
-                else:
-                    break
+    fetchGenres = db.session.query(Books.genre, func.count(Issues.sno).label("issue_count")).join(Books, Books.book_id == Issues.book_id).filter(
+        Issues.user_id == user_id).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).limit(5).all()
+    pieData = [[i[0], i[1]] for i in fetchGenres]
 
-        books = []
-        for i in fetchData:
-            book = Books.query.filter_by(book_id=i.book_id).first()
-            books.append(book.genre)
+    barvals = [i[1] for i in barData]
+    active_month = barData[barvals.index(max([i[1] for i in barData]))][0]
 
-        pieData = dict(sorted({i: books.count(i)
-                               for i in books}.items(), key=lambda x: x[1], reverse=True))
-        if len(pieData) > 5:
-            pieData = dict(list(pieData.items())[:5])
-        finalPieData = [[i, pieData[i]] for i in pieData]
+    ratings = Ratings.query.filter_by(user_id=user_id).all()
+    days_last_loged = (datetime.now() - fetchUser[1]).days
+    cardData = {
+        "total_issued": len(fetchIssues),
+        "total_requests": len(fetchRequests),
+        "most_active_month": active_month,
+        "total_ratings": len(ratings),
+        "days_last_loged": days_last_loged
+    }
 
-        fetchUser = requests.get(
-            f"http://127.0.0.1:5000/get-content/users?user_id={user_id}")
-        fetchUser = fetchUser.json()[0]
+    avg_rate_fetcher = db.session.query(func.avg(Ratings.rating).label(
+        "avg_rating")).filter(Ratings.user_id == user_id).first()
+    avg_rate = round(avg_rate_fetcher[0], 1) if avg_rate_fetcher else 0.0
 
-        active_month = ""
-        index = 0
-        activity = 0
-        for j, i in enumerate(finalBarData):
-            if i[1] > activity:
-                activity = i[1]
-                index = j
-        if len(finalBarData) > 0:
-            active_month = finalBarData[index][0]
-        ratings = Ratings.query.filter_by(user_id=user_id).all()
-        now = f"{datetime.now()}"
-        days_last_loged = (datetime.strptime(now, "%Y-%m-%d %H:%M:%S.%f") -
-                           datetime.strptime(fetchUser["last_loged"], "%a, %d %b %Y %H:%M:%S %Z")).days
-        cardData = {
-            "total_issued": len(fetchIssues),
-            "total_requests": len(fetchRequests),
-            "most_active_month": active_month,
-            "total_ratings": len(ratings),
-            "days_last_loged": days_last_loged
-        }
-
-        fetchUser["last_loged"] = datetime.strptime(
-            f"{fetchUser['last_loged']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
-        fetchUser["doj"] = datetime.strptime(
-            f"{fetchUser['doj']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
-        fetchUser["dob"] = datetime.strptime(
-            f"{fetchUser['dob']}", "%a, %d %b %Y %H:%M:%S %Z").strftime("%d %b %Y")
-
-        fetchRating = requests.get(
-            f"http://127.0.0.1:5000/get-content/ratings?user_id={user_id}")
-        avg_rate = 0.0
-        if fetchRating.status_code == 200:
-            fetchRating = fetchRating.json()
-            avg_rate = round(sum([float(i['rating'])
-                             for i in fetchRating])/len(fetchRating), 1)
-        else:
-            fetchRating = fetchRating.json()
-        score = 100*len(fetchIssues) + 250*len(fetchRating)
-        # score = score*0
-        rank = "Sage" if score >= 13750 else "Scholar" if score >= 5000 else "Literati" if score >= 1750 else "Reader" if score >= 500 else "No"
-        next_criteria = {
-            "No": [
-                "Read 5 Books"
-            ],
-            "Reader": [
-                "Read 10 Books",
-                "Review 3 Books",
-            ],
-            "Literati": [
-                "Read 25 Books",
-                "Review 10 Books",
-            ],
-            "Scholar": [
-                "Read 75 Books",
-                "Review 25 Books",
-            ],
-            "Sage": [
-                "Congratulations!! on reaching the pinnacle."
-            ]
-        }
-        next_points = {
-            "No": 500,
-            "Reader": 1750,
-            "Literati": 5000,
-            "Scholar": 13750,
-        }
-        return {"barchart": finalBarData[::-1], "piechart": finalPieData, "user_info": fetchUser, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssues), "numRequests": len(fetchRequests), "avg_rating": avg_rate}, 200
-    except:
-        abort(404, description="No Statistics Available")
+    fetchRating = Ratings.query.filter_by(user_id=user_id).all()
+    fetchIssueCount = Issues.query.filter_by(user_id=user_id).all()
+    score = 100*len(fetchIssues) + 250*len(fetchIssueCount)
+    rank = "Sage" if score >= 13750 else "Scholar" if score >= 5000 else "Literati" if score >= 1750 else "Reader" if score >= 500 else "No"
+    next_criteria = {
+        "No": [
+            "Read 5 Books"
+        ],
+        "Reader": [
+            "Read 10 Books",
+            "Review 3 Books",
+        ],
+        "Literati": [
+            "Read 25 Books",
+            "Review 10 Books",
+        ],
+        "Scholar": [
+            "Read 75 Books",
+            "Review 25 Books",
+        ],
+        "Sage": [
+            "Congratulations!! on reaching the pinnacle."
+        ]
+    }
+    next_points = {
+        "No": 500,
+        "Reader": 1750,
+        "Literati": 5000,
+        "Scholar": 13750,
+    }
+    return {"barchart": barData[::-1], "piechart": pieData, "user_info": user_data, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssueCount), "numRequests": len(fetchRequests), "avg_rating": avg_rate}, 200
 
 
 @app.route("/get-feedbacks", methods=["GET"])
@@ -776,33 +747,82 @@ def getStatisticsLibrarianUsers():
         [f"{month_dict[str(int(i[0][-2:]))]}'{i[0][:4]}", i[1]] for i in active]
     return {"barData": activity_data[::-1], "pieData": gender_count, "dataValues": dataValues, "userLeague": league_count}, 200
 
+
 @app.route("/get-statistics/librarian/books")
 def getStatisticsLibrarianBooks():
     genre_issues = db.session.query(Books.genre, func.count(Issues.sno).label(
-        "issue_count")).join(Issues, Books.book_id == Issues.book_id).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).limit(5).all()
+        "issue_count")).join(Issues, Books.book_id == Issues.book_id).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).limit(5).all()
     male_genres = db.session.query(
         Books.genre,
-        func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(Users.gender == "Male").group_by(Books.genre).order_by(desc(func.count(Issues.sno))).limit(5).all()  
+        func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(Users.gender == "Male").group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).limit(5).all()
     female_genres = db.session.query(
         Books.genre,
-        func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(Users.gender == "Female").group_by(Books.genre).order_by(desc(func.count(Issues.sno))).offset(3).limit(5).all()
-    
+        func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(Users.gender == "Female").group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).offset(3).limit(5).all()
+
     today = datetime.today()
     year_diff = func.julianday(today) - func.julianday(Users.dob)
     age = year_diff / 365.25
 
-    age_young = db.session.query(Books.genre,func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(age.between(15, 30)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).limit(5).all()
-    age_middle = db.session.query(Books.genre,func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(age.between(31, 60)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).offset(5).limit(5).all()
-    age_old = db.session.query(Books.genre,func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(Users, Users.user_id == Issues.user_id).filter(age.between(61, 80)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).offset(3).limit(5).all()
+    age_young = db.session.query(Books.genre, func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(
+        Users, Users.user_id == Issues.user_id).filter(age.between(15, 30)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).limit(5).all()
+    age_middle = db.session.query(Books.genre, func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(
+        Users, Users.user_id == Issues.user_id).filter(age.between(31, 60)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).offset(5).limit(5).all()
+    age_old = db.session.query(Books.genre, func.count(Issues.sno).label("issue_count")).join(Issues, Books.book_id == Issues.book_id).join(
+        Users, Users.user_id == Issues.user_id).filter(age.between(61, 80)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).offset(3).limit(5).all()
 
     dataValues = {
-        "most_issued":db.session.query(Books.img, (func.count(Issues.sno).label("issue_count"))).join(Issues, Books.book_id == Issues.book_id).group_by(Books.book_id).order_by(desc(func.count(Issues.sno))).limit(1).all()[0][0],
-        "most_rated":db.session.query(Books.img, (func.count(Ratings.sno).label("rating_count"))).join(Ratings, Books.book_id == Ratings.book_id).group_by(Books.book_id).order_by(desc(func.count(Ratings.sno))).limit(1).all()[0][0],
-        "highest_rated":db.session.query(Books.img, (func.avg(Ratings.rating).label("rating_avg"))).join(Ratings, Books.book_id == Ratings.book_id).group_by(Books.book_id).order_by(desc(func.avg(Ratings.rating))).offset(5).limit(1).all()[0][0],
-        "least_rated":db.session.query(Books.img, (func.avg(Ratings.rating).label("rating_avg"))).join(Ratings, Books.book_id == Ratings.book_id).filter(Ratings.rating>0).group_by(Books.book_id).order_by(func.avg(Ratings.rating)).offset(5).limit(1).all()[0][0],
-        "latest_book":db.session.query(Books.img).order_by(desc(Books.date_added)).limit(1).all()[0][0],
+        "most_issued": db.session.query(Books.img, (func.count(Issues.sno).label("issue_count"))).join(Issues, Books.book_id == Issues.book_id).group_by(Books.book_id).order_by(desc(func.count(Issues.sno))).limit(1).all()[0][0],
+        "most_rated": db.session.query(Books.img, (func.count(Ratings.sno).label("rating_count"))).join(Ratings, Books.book_id == Ratings.book_id).group_by(Books.book_id).order_by(desc(func.count(Ratings.sno))).limit(1).all()[0][0],
+        "highest_rated": db.session.query(Books.img, (func.avg(Ratings.rating).label("rating_avg"))).join(Ratings, Books.book_id == Ratings.book_id).group_by(Books.book_id).order_by(desc(func.avg(Ratings.rating))).offset(5).limit(1).all()[0][0],
+        "least_rated": db.session.query(Books.img, (func.avg(Ratings.rating).label("rating_avg"))).join(Ratings, Books.book_id == Ratings.book_id).filter(Ratings.rating > 0).group_by(Books.book_id).order_by(func.avg(Ratings.rating)).offset(5).limit(1).all()[0][0],
+        "latest_book": db.session.query(Books.img).order_by(desc(Books.date_added)).limit(1).all()[0][0],
     }
-    return {"general_genres":[[i[0],i[1]] for i in genre_issues], "male_genres":[[i[0],i[1]] for i in male_genres],"female_genres":[[i[0],i[1]] for i in female_genres], "age_young":[[i[0],i[1]] for i in age_young], "age_middle":[[i[0],i[1]] for i in age_middle], "age_old":[[i[0],i[1]] for i in age_old], "dataValues":dataValues}, 200
+    return {"general_genres": [[i[0], i[1]] for i in genre_issues], "male_genres": [[i[0], i[1]] for i in male_genres], "female_genres": [[i[0], i[1]] for i in female_genres], "age_young": [[i[0], i[1]] for i in age_young], "age_middle": [[i[0], i[1]] for i in age_middle], "age_old": [[i[0], i[1]] for i in age_old], "dataValues": dataValues}, 200
+
+
+@app.route("/get-statistics/librarian/authors")
+def getStatisticsLibrarianAuthors():
+    avg_country = db.session.query(Authors.country, func.avg(Authors.avg_rating).label(
+        "avg_rating")).group_by(Authors.country).order_by(desc(func.avg(Authors.avg_rating))).limit(10).all()
+    count_country = db.session.query(Authors.country, func.count(Authors.avg_rating).label(
+        "count")).group_by(Authors.country).order_by(desc(func.count(Authors.avg_rating))).limit(5).all()
+
+    today = datetime.today()
+    year_diff = func.julianday(today) - func.julianday(Authors.dob)
+    age = year_diff / 365.25
+
+    age_group = case(
+        (age.between(20, 40), 'Age 20-40'),
+        (age.between(40, 70), 'Age 40-70'),
+        (age.between(70, 130), 'Above 70'),
+        else_='Unknown'
+    )
+    age_range = case(
+        (age.between(30, 40), '30-40'),
+        (age.between(40, 50), '40-50'),
+        (age.between(50, 60), '50-60'),
+        (age.between(60, 70), '60-70'),
+        (age.between(70, 80), '70-80'),
+        (age.between(80, 90), '80-90'),
+        (age.between(90, 100), '90-100'),
+        (age.between(100, 110), '100-110'),
+        (age.between(110, 120), '110-120'),
+        (age.between(120, 130), '120-130'),
+        else_='Unknown'
+    )
+    avg_age = db.session.query(age_range.label("age_range"), func.avg(Authors.avg_rating).label(
+        "avg_rating")).group_by(age_range).order_by(desc(Authors.dob)).limit(10).all()
+    count_age = db.session.query(age_group.label("age_group"), func.count(
+        Authors.avg_rating).label("count")).group_by(age_group).all()
+
+    dataValues = {
+        "most_issued": [i for i in db.session.query(Authors.img.label('author_img'), Authors.author_name, func.count(Issues.sno).label("issue_count")).join(Books, Books.author_id == Authors.author_id).join(Issues, Books.book_id == Issues.book_id).group_by(Authors.author_id).order_by(desc(func.count(Issues.sno))).limit(1).all()[0]],
+        "most_popular": [i for i in db.session.query(Authors.img.label('author_img'), Authors.author_name, Authors.avg_rating).order_by(desc(Authors.avg_rating)).limit(1).all()[0]],
+        "least_popular": [i for i in db.session.query(Authors.img.label('author_img'), Authors.author_name, Authors.avg_rating).order_by(Authors.avg_rating).limit(1).all()[0]],
+        "highest_book_rating": [i for i in db.session.query(Authors.img.label('author_img'), Authors.author_name, func.avg(Ratings.rating).label("avg_rating")).join(Books, Books.author_id == Authors.author_id).join(Ratings, Books.book_id == Ratings.book_id).group_by(Authors.author_id).order_by(desc(func.avg(Ratings.rating))).limit(1).all()[0]],
+        "lowest_book_rating": [i for i in db.session.query(Authors.img.label('author_img'), Authors.author_name, func.avg(Ratings.rating).label("avg_rating")).join(Books, Books.author_id == Authors.author_id).join(Ratings, Books.book_id == Ratings.book_id).group_by(Authors.author_id).order_by(func.avg(Ratings.rating)).limit(1).all()[0]],
+    }
+    return {"avg_country": [[i[0], round(i[1], 3)] for i in avg_country], "count_country": [[i[0], i[1]] for i in count_country], "avg_age": [[i[0], round(i[1], 3)] for i in avg_age], "count_age": [[i[0], i[1]] for i in count_age], "dataValues": dataValues}, 200
 
 
 # Data Insertion

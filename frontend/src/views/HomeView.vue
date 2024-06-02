@@ -99,8 +99,80 @@
           />
         </div>
       </div>
+      <div class="headBookTitleContainer" v-if="searchBooks.titles.length > 0">
+        <div class="headBookTitle">Search by Titles</div>
+      </div>
       <div
-        v-for="(book, index) in searchBooks"
+        v-for="(book, index) in searchBooks.titles"
+        :key="index"
+        class="card"
+        @click="changePreviewBook(book.book_id)"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+      </div>
+      <div class="headBookTitleContainer" v-if="searchBooks.authors.length > 0">
+        <div class="headBookTitle">Search by Authors</div>
+      </div>
+      <div
+        v-for="(book, index) in searchBooks.authors"
+        :key="index"
+        class="card"
+        @click="changePreviewBook(book.book_id)"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+      </div>
+      <div
+        class="headBookTitleContainer"
+        v-if="searchBooks.sections.length > 0"
+      >
+        <div class="headBookTitle">Search by Sections</div>
+      </div>
+      <div
+        v-for="(book, index) in searchBooks.sections"
+        :key="index"
+        class="card"
+        @click="changePreviewBook(book.book_id)"
+      >
+        <div class="bookImgContainer">
+          <img :src="book.img" alt="" class="bookImg" />
+        </div>
+        <div class="bookContent">
+          <p class="bookTitle">{{ shortenText(book.book_name) }}</p>
+          <p class="bookAuthor">
+            AUTHOR: <span>{{ book.author_name }}</span>
+          </p>
+          <p class="bookAuthor">
+            GENRE: <span>{{ book.genre }}</span>
+          </p>
+        </div>
+      </div>
+      <div class="headBookTitleContainer" v-if="searchBooks.genres.length > 0">
+        <div class="headBookTitle">Search by Genres</div>
+      </div>
+      <div
+        v-for="(book, index) in searchBooks.genres"
         :key="index"
         class="card"
         @click="changePreviewBook(book.book_id)"
@@ -372,7 +444,12 @@ export default {
     return {
       myBooks: [],
       randomBooks: [],
-      searchBooks: [],
+      searchBooks: {
+        titles: [],
+        authors: [],
+        sections: [],
+        genres: [],
+      },
       books: [],
       sections: [],
       authors: [],
@@ -386,6 +463,7 @@ export default {
       },
       user_id: "REPA0354",
       changeView: 1,
+      selectedBookId: null,
     };
   },
   created() {
@@ -395,12 +473,22 @@ export default {
     this.fetchMyBooks();
     this.fetchBooks();
   },
+  // watch: {
+  //   previewBook: {
+  //     handler(newVal, oldVal) {
+  //       console.log("Preview book changed:", newVal, oldVal);
+  //     },
+  //     deep: true,
+  //   },
+  // },
   watch: {
-    previewBook: {
-      handler(newVal, oldVal) {
-        console.log("Preview book changed:", newVal, oldVal);
-      },
-      deep: true,
+    keyword(newKeyword) {
+      this.bookSearcher(newKeyword);
+    },
+    selectedBookId(newBookId) {
+      if (newBookId) {
+        this.changePreviewBook(newBookId);
+      }
     },
   },
   methods: {
@@ -410,6 +498,8 @@ export default {
         this.fetchRandomBooks();
         this.fetchLatest();
         this.fetchMyBooks();
+      } else if (view == 2) {
+        this.fetchLatest();
       } else if (view == 3) {
         this.fetchBooks();
       } else if (view == 4) {
@@ -432,8 +522,26 @@ export default {
           },
         })
         .then((response) => {
-          this.searchBooks = [];
-          this.searchBooks = response.data;
+          this.searchBooks = {
+            titles: [],
+            authors: [],
+            sections: [],
+            genres: [],
+          };
+          this.searchBooks.titles = response.data.titles;
+          this.searchBooks.authors = response.data.authors;
+          this.searchBooks.genres = response.data.genres;
+          this.searchBooks.sections = response.data.sections;
+          console.log(this.searchBooks);
+          if (this.searchBooks.titles.length != 0) {
+            this.changePreviewBook(this.searchBooks.titles[0].book_id);
+          } else if (this.searchBooks.authors.length != 0) {
+            this.changePreviewBook(this.searchBooks.authors[0].book_id);
+          } else if (this.searchBooks.sections.length != 0) {
+            this.changePreviewBook(this.searchBooks.sections[0].book_id);
+          } else if (this.searchBooks.genres.length != 0) {
+            this.changePreviewBook(this.searchBooks.genres[0].book_id);
+          }
         })
         .catch(() => {});
     },
@@ -534,6 +642,12 @@ export default {
       axios
         .get("http://127.0.0.1:5000/get-content/latestBooks")
         .then((response) => {
+          this.searchBooks = {
+            titles: [],
+            authors: [],
+            sections: [],
+            genres: [],
+          };
           this.latestBooks = response.data;
           this.changePreviewBook(this.latestBooks[0].book_id);
         })
@@ -1039,5 +1153,20 @@ export default {
   height: 100%;
   overflow: hidden;
   overflow-x: scroll;
+}
+.headBookTitleContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 5rem;
+  margin-left: 1.4rem;
+}
+.headBookTitle {
+  display: flex;
+  width: 80%;
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
 }
 </style>
