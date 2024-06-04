@@ -1,6 +1,6 @@
 <template>
   <div class="navbar">
-    <router-link to="/" class="logo">
+    <router-link to="/home" class="logo">
       <div class="logoContainer">
         <img
           src="@/assets/images/Oak Png.png"
@@ -11,12 +11,13 @@
       <p class="logoText">Bibliophilia</p>
     </router-link>
     <div class="navLinks">
-      <router-link to="/" class="link">Home</router-link>
+      <router-link to="/home" class="link">Home</router-link>
       <router-link to="/about" class="link">About</router-link>
       <router-link to="/my-books" class="link">My Books</router-link>
+      <router-link to="/" class="link">Logout</router-link>
       <div class="profile">
         <img
-          v-if="gender == 'male'"
+          v-if="gender == 'Male'"
           src="@/assets/images/male profile.png"
           alt="username"
           class="profilePic"
@@ -39,7 +40,7 @@ export default {
     gender: {
       type: String,
       required: false,
-      default: "male",
+      default: "Male",
     },
   },
 };

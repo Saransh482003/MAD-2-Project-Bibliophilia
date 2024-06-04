@@ -27,14 +27,7 @@
           </div>
         </div>
         <div class="myBooksTrack" v-else>
-          <div
-            v-for="(book, index) in myBooks"
-            :key="index"
-            class="card"
-            @click="changePreviewBook(book.book_id)"
-          >
-            <p class="myBooksHead">No issued books found.</p>
-          </div>
+          <p class="myBooksHead">No issued books found.</p>
         </div>
       </div>
       <div class="myBooks">
@@ -435,8 +428,9 @@
 </template>
 
 <script>
-import axios from "axios";
+import axios from "@/axios";
 import SideNav from "@/components/SideNav.vue";
+
 export default {
   components: { SideNav },
   name: "HomeView",
@@ -461,7 +455,7 @@ export default {
         message: "Click to Request Book",
         limit: 0,
       },
-      user_id: "REPA0354",
+      user_id: localStorage.getItem("user_id"),
       changeView: 1,
       selectedBookId: null,
     };
@@ -491,6 +485,9 @@ export default {
       }
     },
   },
+  mounted() {
+    this.user_id = localStorage.getItem("user_id");
+  },
   methods: {
     changeMiddleView(view) {
       this.changeView = view;
@@ -516,7 +513,7 @@ export default {
     bookSearcher() {
       let keyword = document.getElementById("searchbox").value;
       axios
-        .get(`http://127.0.0.1:5000/search-content?keyword=${keyword}`, {
+        .get(`http://192.168.1.3:5000/search-content?keyword=${keyword}`, {
           params: {
             keyword: keyword,
           },
@@ -547,7 +544,9 @@ export default {
     },
     changePreviewBook(book_id) {
       axios
-        .get(`http://127.0.0.1:5000/get-content/recent-book?book_id=${book_id}`)
+        .get(
+          `http://192.168.1.3:5000/get-content/recent-book?book_id=${book_id}`
+        )
         .then((response) => {
           this.previewBook = response.data;
           this.previewBook.dob = this.formatDateToDDMMYYYY(
@@ -567,7 +566,7 @@ export default {
     requestAllowance(book_id, user_id) {
       axios
         .get(
-          `http://127.0.0.1:5000/get-content/issues?book_id=${book_id}&user_id=${user_id}`
+          `http://192.168.1.3:5000/get-content/issues?book_id=${book_id}&user_id=${user_id}`
         )
         .then(() => {
           this.allowedRequest.status = 602;
@@ -576,7 +575,7 @@ export default {
         .catch(() => {
           axios
             .get(
-              `http://127.0.0.1:5000/get-content/requests?book_id=${book_id}&user_id=${user_id}`
+              `http://192.168.1.3:5000/get-content/requests?book_id=${book_id}&user_id=${user_id}`
             )
             .then((response) => {
               if (response.data.length >= 5) {
@@ -598,19 +597,19 @@ export default {
     fetchMyBooks() {
       axios
         .get(
-          `http://127.0.0.1:5000/get-content/myBooks?user_id=${this.user_id}`
+          `http://192.168.1.3:5000/get-content/myBooks?user_id=${this.user_id}`
         )
         .then((response) => {
           this.myBooks = response.data["Current"];
           // this.changePreviewBook(this.myBooks[0].book_id);
         })
         .catch(() => {
-          this.$router.push("/error");
+          this.myBooks = [];
         });
     },
     fetchRandomBooks() {
       axios
-        .get(`http://127.0.0.1:5000/get-content/randomBooks`)
+        .get(`http://192.168.1.3:5000/get-content/randomBooks`)
         .then((response) => {
           this.randomBooks = response.data;
         })
@@ -620,7 +619,7 @@ export default {
     },
     fetchBooks() {
       axios
-        .get("http://127.0.0.1:5000/get-content/books")
+        .get("http://192.168.1.3:5000/get-content/books")
         .then((response) => {
           this.books = response.data;
         })
@@ -630,7 +629,7 @@ export default {
     },
     fetchSections() {
       axios
-        .get("http://127.0.0.1:5000/get-content/sections")
+        .get("http://192.168.1.3:5000/get-content/sections")
         .then((response) => {
           this.sections = response.data;
         })
@@ -640,7 +639,7 @@ export default {
     },
     fetchLatest() {
       axios
-        .get("http://127.0.0.1:5000/get-content/latestBooks")
+        .get("http://192.168.1.3:5000/get-content/latestBooks")
         .then((response) => {
           this.searchBooks = {
             titles: [],
@@ -657,7 +656,7 @@ export default {
     },
     fetchAuthors() {
       axios
-        .get("http://127.0.0.1:5000/get-content/authors")
+        .get("http://192.168.1.3:5000/get-content/authors")
         .then((response) => {
           this.authors = response.data;
         })
@@ -667,7 +666,7 @@ export default {
     },
     fetchGenres() {
       axios
-        .get("http://127.0.0.1:5000/get-content/genres")
+        .get("http://192.168.1.3:5000/get-content/genres")
         .then((response) => {
           this.genres = response.data;
         })
@@ -685,7 +684,7 @@ export default {
         const year = today.getFullYear();
         axios
           .get(
-            `http://127.0.0.1:5000/push-content/requests?book_id=${book_id}&user_id=${this.user_id}&request_date=${year}-${month}-${day}`
+            `http://192.168.1.3:5000/push-content/requests?book_id=${book_id}&user_id=${this.user_id}&request_date=${year}-${month}-${day}`
           )
           .then(() => {
             console.log(

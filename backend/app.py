@@ -1,4 +1,6 @@
 from flask import Flask, jsonify, request, abort
+from functools import wraps
+import jwt
 from sqlalchemy.sql.expression import func, desc, case
 from flask_cors import CORS
 from models import *
@@ -13,6 +15,7 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///library.sqlite3'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = "3T9rFtQxZ1jA77sKJiy_mT6YvFP_W0C6eM67oNOxO0Y"
 
 db.init_app(app)
 CORS(app)
@@ -28,9 +31,139 @@ def nextID(id):
         return f"{prefix}{alpha}{'0'*(4-len(str(int(num))))}{int(num)+1}"
 
 
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+        
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+        
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_user_id = data['sub']
+        except Exception as e:
+            return jsonify({'message': 'Token is invalid!'}), 401
+        
+        return f(*args, **kwargs)
+    
+    return decorated
+
+
+def librarian_token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+        
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+        
+        try:
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_role = data['sub']
+        except Exception as e:
+            return jsonify({'message': 'Token is invalid!'}), 401
+        
+        return f(*args, **kwargs)
+    
+    return decorated
+
+@app.route("/librarian-signin", methods=["GET","POST"])
+def librarianSignin():
+    form = request.get_json()
+    if form["user_name"] == "Nairarbil069" and form["password"] == "SHEL@20$TT#":
+        token = jwt.encode({
+        'sub': "librarian",
+        'iat':datetime.utcnow(),
+        'exp': datetime.utcnow() + timedelta(hours=2)},
+        app.config['SECRET_KEY'])
+        return {"message": f"Welcome Librarian", "code": 801, "token": token}, 200
+    else:
+        return {"message": f"Incorrect credentials. Please try again.", "code": 801}, 200
+
+# Signin Signup
+@app.route("/signin", methods=["GET", "POST"])
+def signin():
+    form = request.get_json()
+    fetchUser = Users.query.filter_by(
+        user_name=form["user_name"], password=form["password"]).first()
+    
+    if fetchUser:
+        fetchBan = Blacklists.query.filter_by(
+            user_id=fetchUser.user_id).first()
+        
+        token = jwt.encode({
+        'sub': fetchUser.user_id,
+        'iat':datetime.utcnow(),
+        'exp': datetime.utcnow() + timedelta(hours=24)},
+        app.config['SECRET_KEY'])
+        if fetchBan:
+            if fetchBan.ban_type == "Perma":
+                return {"message": "You have been permanently banned. If you believe this is a mistake, please contact the librarian.", "code": 802}, 200
+            else:
+                if fetchBan.ban_date >= datetime.now() + timedelta(days=30):
+                    fetchUser.last_loged = datetime.now()
+                    db.session.commit()
+                    return {"message": f"Welcome {fetchUser.user_name}", "code": 801, "user_id": fetchUser.user_id, "token": token}, 200
+                else:
+                    ban_end = fetchBan.ban_date + timedelta(days=30)
+                    ban_date_str = ban_end.strftime("%d %b %Y")
+                    days_left = (ban_end - datetime.now()).days
+                    return {"message": f"You have been temporarily banned by the librarian. The ban would be lifted on {ban_date_str} ({days_left} days left).", "code": 803}, 200
+        else:
+            fetchUser.last_loged = datetime.now()
+            db.session.commit()
+            return {"message": f"Welcome {fetchUser.user_name}", "code": 801, "user_id": fetchUser.user_id, "token": token}, 200
+    else:
+        return {"message": "Incorrect credentials. Please try again.", "code": 804}, 200
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    form = request.get_json()
+    print(form)
+    fetchUser = Users.query.filter_by(
+        user_name=form["user_name"], password=form["password"]).first()
+    if not fetchUser:
+        last_id = Users.query.order_by(Users.user_id.desc()).first().user_id
+        next_id = nextID(last_id)
+        new_user = Users(
+            user_id=next_id,
+            user_name=form["user_name"],
+            password=form["password"],
+            email=form["email"],
+            ph_no=form["phone"],
+            last_loged=datetime.now(),
+            gender=form["gender"],
+            doj=datetime.now(),
+            dob=datetime.strptime(form["dob"], "%Y-%m-%d")
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        
+        token = jwt.encode({
+            'sub': next_id,
+            'iat':datetime.utcnow(),
+            'exp': datetime.utcnow() + timedelta(hours=24)},
+            app.config['SECRET_KEY'])
+        return {"message": f"Welcome {form['user_name']}", "code": 801, "user_id": next_id, "token": token}, 200
+    else:
+        return {"message": "You are already a member. Please signin to proceed", "code": 805}, 200
+
 # Data Retrieval
+
+
 @app.route("/get-content/books", methods=["GET"])
+@token_required
 def getBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -60,7 +193,12 @@ def getBooks():
 
 
 @app.route("/get-content/latestBooks", methods=["GET"])
+@token_required
 def getLatestBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     fetcher = Books.query.order_by(
         Books.date_added.desc()).limit(500).all()
 
@@ -83,7 +221,12 @@ def getLatestBooks():
 
 
 @app.route("/get-content/authors", methods=["GET"])
+@token_required
 def getAuthors():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -112,7 +255,12 @@ def getAuthors():
 
 
 @app.route("/get-content/users", methods=["GET"])
+@token_required
 def getUsers():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -143,7 +291,12 @@ def getUsers():
 
 
 @app.route("/get-content/sections", methods=["GET"])
+@token_required
 def getSections():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -169,7 +322,12 @@ def getSections():
 
 
 @app.route("/get-content/ratings", methods=["GET"])
+@token_required
 def getRatings():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -196,7 +354,12 @@ def getRatings():
 
 
 @app.route("/get-content/issues", methods=["GET"])
+@token_required
 def getIssues():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -224,7 +387,12 @@ def getIssues():
 
 
 @app.route("/get-content/requests", methods=["GET"])
+@token_required
 def getRequests():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -250,7 +418,12 @@ def getRequests():
 
 
 @app.route("/get-content/blacklists", methods=["GET"])
+@token_required
 def getBan():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -277,7 +450,12 @@ def getBan():
 
 
 @app.route("/get-content/genres", methods=["GET"])
+@token_required
 def getGenres():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     if "start" in args:
         del args["start"]
@@ -298,7 +476,12 @@ def getGenres():
 
 
 @app.route("/get-content/recent-book", methods=["GET"])
+@token_required
 def getRecentBook():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     book_id = request.args.to_dict()["book_id"]
     fetchBook = Books.query.filter_by(book_id=book_id).first()
     fetchAuthor = Authors.query.filter_by(
@@ -313,8 +496,8 @@ def getRecentBook():
     if fetchRating != []:
         for rating in fetchRating:
             sum_rate += float(rating.rating)
-            roger = f"http://127.0.0.1:5000/get-content/users?user_id={rating.user_id}"
-            fetcher = requests.get(roger).json()[0]
+            roger = f"http://192.168.1.3:5000/get-content/users?user_id={rating.user_id}"
+            fetcher = requests.get(roger,headers=headers).json()[0]
             ratingReturn = {
                 "sno": rating.sno,
                 "user_id": rating.user_id,
@@ -363,7 +546,12 @@ def getRecentBook():
 
 
 @app.route("/search-content", methods=["GET"])
+@token_required
 def searchBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     keyword = request.args.to_dict()['keyword']
     fetcherBooks = Books.query.filter(
         Books.book_name.like(f"%{keyword}%")).limit(100).all()
@@ -396,7 +584,12 @@ def searchBooks():
 
 
 @app.route("/search-content/my-books", methods=["GET"])
+@token_required
 def searchMyBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     keyword = request.args.to_dict()['keyword']
     user_id = request.args.to_dict()['user_id']
     fetcher = db.session.query(Issues, Books).join(Books, Books.book_id == Issues.book_id).filter(
@@ -423,18 +616,23 @@ def searchMyBooks():
 
 
 @app.route("/get-content/myBooks", methods=["GET"])
+@token_required
 def myBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     user_id = args['user_id']
 
-    roger = f"http://127.0.0.1:5000/get-content/issues?user_id={user_id}"
-    fetcher = requests.get(roger).json()[::-1]
+    roger = f"http://192.168.1.3:5000/get-content/issues?user_id={user_id}"
+    fetcher = requests.get(roger,headers=headers).json()[::-1]
 
     today_date = datetime.now()
     books_list = {"Current": [], "History": []}
     for issue in fetcher:
-        bookDetails = f"http://127.0.0.1:5000/get-content/books?book_id={issue['book_id']}"
-        fetcherBooks = requests.get(bookDetails).json()[0]
+        bookDetails = f"http://192.168.1.3:5000/get-content/books?book_id={issue['book_id']}"
+        fetcherBooks = requests.get(bookDetails,headers=headers).json()[0]
         request_date = parser.parse(issue["request_date"])
         doi = parser.parse(issue["doi"][:-3])
         dor = parser.parse(issue["dor"][:-3])
@@ -456,7 +654,12 @@ def myBooks():
 
 
 @app.route("/get-content/randomBooks", methods=["GET"])
+@token_required
 def randomBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     fetcher = Books.query.order_by(func.random()).limit(10).all()
 
     if fetcher:
@@ -478,91 +681,128 @@ def randomBooks():
 
 
 @app.route("/get-statistics", methods=["GET"])
+@token_required
 def getUserStatistics():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     user_id = request.args.to_dict()["user_id"]
-
     fetchRequests = db.session.query(func.strftime("%Y-%m", Requests.request_date).label('month_year'), func.count(Requests.sno)).filter(
         Requests.user_id == user_id).group_by(func.strftime("%Y-%m", Requests.request_date)).order_by(desc(func.strftime('%Y-%m', Requests.request_date))).limit(10).all()
+    
     fetchIssues = db.session.query(func.strftime("%Y-%m", Issues.request_date).label('month_year'), func.count(Issues.sno)).filter(
         Issues.user_id == user_id).group_by(func.strftime("%Y-%m", Issues.request_date)).order_by(desc(func.strftime('%Y-%m', Issues.request_date))).limit(10).all()
-    fetchIssueDict = {i[0]: i[1] for i in fetchIssues}
-    month_dict = {index: calendar.month_abbr[index] for index in range(1, 13)}
-    for i in fetchRequests:
-        fetchIssueDict[i[0]] += i[1]
-    barData = [[f"{month_dict[int(i[-2:])]}'{i[2:4]}", fetchIssueDict[i]]
-               for i in fetchIssueDict]
-
-    fetchUser = db.session.query(Users.user_name, Users.last_loged,
-                                 Users.doj, Users.email).filter(Users.user_id == user_id).first()
+        
+    fetchUser = Users.query.filter_by(user_id = user_id).first()
     user_data = {
-        "user_name": fetchUser[0],
-        "last_loged": fetchUser[1].strftime("%d %b %Y"),
-        "doj": fetchUser[2].strftime("%d %b %Y"),
-        "email": fetchUser[3],
+        "user_name": fetchUser.user_name,
+        "last_loged": fetchUser.last_loged.strftime("%d %b %Y"),
+        "doj": fetchUser.doj.strftime("%d %b %Y"),
+        "email": fetchUser.email,
+        "gender": fetchUser.gender,
     }
-
-    fetchGenres = db.session.query(Books.genre, func.count(Issues.sno).label("issue_count")).join(Books, Books.book_id == Issues.book_id).filter(
-        Issues.user_id == user_id).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).limit(5).all()
-    pieData = [[i[0], i[1]] for i in fetchGenres]
-
-    barvals = [i[1] for i in barData]
-    active_month = barData[barvals.index(max([i[1] for i in barData]))][0]
-
-    ratings = Ratings.query.filter_by(user_id=user_id).all()
-    days_last_loged = (datetime.now() - fetchUser[1]).days
-    cardData = {
-        "total_issued": len(fetchIssues),
-        "total_requests": len(fetchRequests),
-        "most_active_month": active_month,
-        "total_ratings": len(ratings),
-        "days_last_loged": days_last_loged
-    }
-
-    avg_rate_fetcher = db.session.query(func.avg(Ratings.rating).label(
-        "avg_rating")).filter(Ratings.user_id == user_id).first()
-    avg_rate = round(avg_rate_fetcher[0], 1) if avg_rate_fetcher else 0.0
-
     fetchRating = Ratings.query.filter_by(user_id=user_id).all()
     fetchIssueCount = Issues.query.filter_by(user_id=user_id).all()
-    score = 100*len(fetchIssues) + 250*len(fetchIssueCount)
-    rank = "Sage" if score >= 13750 else "Scholar" if score >= 5000 else "Literati" if score >= 1750 else "Reader" if score >= 500 else "No"
-    next_criteria = {
-        "No": [
-            "Read 5 Books"
-        ],
-        "Reader": [
-            "Read 10 Books",
-            "Review 3 Books",
-        ],
-        "Literati": [
-            "Read 25 Books",
-            "Review 10 Books",
-        ],
-        "Scholar": [
-            "Read 75 Books",
-            "Review 25 Books",
-        ],
-        "Sage": [
-            "Congratulations!! on reaching the pinnacle."
-        ]
-    }
-    next_points = {
-        "No": 500,
-        "Reader": 1750,
-        "Literati": 5000,
-        "Scholar": 13750,
-    }
-    return {"barchart": barData[::-1], "piechart": pieData, "user_info": user_data, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssueCount), "numRequests": len(fetchRequests), "avg_rating": avg_rate}, 200
+    ratings = Ratings.query.filter_by(user_id=user_id).all()
+    try:
+        fetchIssueDict = {i[0]: i[1] for i in fetchIssues}
+        month_dict = {index: calendar.month_abbr[index] for index in range(1, 13)}
+        for i in fetchRequests:
+            if i[0] in fetchIssueDict:
+                fetchIssueDict[i[0]] += i[1]
+        barData = [[f"{month_dict[int(i[-2:])]}'{i[2:4]}", fetchIssueDict[i]]
+                for i in fetchIssueDict]
+
+
+        fetchGenres = db.session.query(Books.genre, func.count(Issues.sno).label("issue_count")).join(Books, Books.book_id == Issues.book_id).filter(
+            Issues.user_id == user_id).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).limit(5).all()
+        pieData = [[i[0], i[1]] for i in fetchGenres]
+
+        barvals = [i[1] for i in barData]
+        active_month = barData[barvals.index(max([i[1] for i in barData]))][0]
+
+        
+        days_last_loged = (datetime.now() - fetchUser.last_loged).days
+        cardData = {
+            "total_issued": len(fetchIssueCount),
+            "total_requests": len(fetchRequests),
+            "most_active_month": active_month,
+            "total_ratings": len(ratings),
+            "days_last_loged": days_last_loged
+        }
+
+        avg_rate_fetcher = db.session.query(func.avg(Ratings.rating).label(
+            "avg_rating")).filter(Ratings.user_id == user_id).first()
+        avg_rate = round(avg_rate_fetcher[0], 1) if avg_rate_fetcher else 0.0
+
+        
+        score = 100*len(fetchIssueCount) + 250*len(fetchRating)
+        rank = "Sage" if score >= 13750 else "Scholar" if score >= 5000 else "Literati" if score >= 1750 else "Reader" if score >= 500 else "No"
+        next_criteria = {
+            "No": [
+                "Read 5 Books"
+            ],
+            "Reader": [
+                "Read 10 Books",
+                "Review 3 Books",
+            ],
+            "Literati": [
+                "Read 25 Books",
+                "Review 10 Books",
+            ],
+            "Scholar": [
+                "Read 75 Books",
+                "Review 25 Books",
+            ],
+            "Sage": [
+                "Congratulations!! on reaching the pinnacle."
+            ]
+        }
+        next_points = {
+            "No": 500,
+            "Reader": 1750,
+            "Literati": 5000,
+            "Scholar": 13750,
+        }
+        return {"barchart": barData[::-1], "piechart": pieData, "user_info": user_data, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssueCount), "numRequests": len(fetchRequests), "avg_rating": avg_rate}, 200
+    except:
+        barData = []
+        for i in range(9):
+            deltaData = datetime.now() - timedelta(days=30*i)
+            barData.append([[f"{deltaData.strftime('%b')}'{deltaData.strftime('%y')}",0]])
+        pieData = [["No Genre",1]]
+        cardData = {
+            "total_issued": len(fetchIssueCount),
+            "total_requests": len(fetchRequests),
+            "most_active_month": "-",
+            "total_ratings": len(ratings),
+            "days_last_loged": (datetime.now() - fetchUser.last_loged).days
+        }
+        score = random.randint(0,400)
+        rank = "No"
+        next_criteria = ["Read 5 Books"]
+        next_pointer = 500
+        numIssues = len(fetchIssueCount)
+        numRequests = len(fetchRequests)
+        avg_rate = 0.0
+        return {"barchart": barData[::-1], "piechart": pieData, "user_info": user_data, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria, "next_points": next_pointer, "numIssues": numIssues, "numRequests": numRequests, "avg_rating": avg_rate}, 200
+
 
 
 @app.route("/get-feedbacks", methods=["GET"])
+@token_required
 def getUserFeedbacks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     user_id = request.args.to_dict()["user_id"]
     fetchRating = requests.get(
-        f"http://127.0.0.1:5000/get-content/ratings?user_id={user_id}")
+        f"http://192.168.1.3:5000/get-content/ratings?user_id={user_id}",headers=headers)
     fetchRating = fetchRating.json()
     fetchIssues = requests.get(
-        f"http://127.0.0.1:5000/get-content/issues?user_id={user_id}")
+        f"http://192.168.1.3:5000/get-content/issues?user_id={user_id}",headers=headers)
     fetchIssues = fetchIssues.json()
     ratings = set([i['book_id'] for i in fetchRating])
     issues = set([i['book_id'] for i in fetchIssues])
@@ -571,16 +811,16 @@ def getUserFeedbacks():
     notRatedBooks = []
     for i in notrated:
         booker = requests.get(
-            f"http://127.0.0.1:5000/get-content/books?book_id={i}")
+            f"http://192.168.1.3:5000/get-content/books?book_id={i}",headers=headers)
         booker = booker.json()[0]
         notRatedBooks.append(booker)
     ratedBooks = []
     for i in rated:
         booker = requests.get(
-            f"http://127.0.0.1:5000/get-content/books?book_id={i}")
+            f"http://192.168.1.3:5000/get-content/books?book_id={i}",headers=headers)
         booker = booker.json()[0]
         feedback = requests.get(
-            f"http://127.0.0.1:5000/get-content/ratings?book_id={i}&user_id={user_id}")
+            f"http://192.168.1.3:5000/get-content/ratings?book_id={i}&user_id={user_id}",headers=headers)
         feedback = feedback.json()[0]
 
         booker["rating"] = math.ceil(float(feedback["rating"]))
@@ -590,25 +830,30 @@ def getUserFeedbacks():
 
 
 @app.route("/get-librarian/previewBook", methods=["GET"])
+@token_required
 def getLibrarianBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     book_id = request.args.to_dict()["book_id"]
     booker = requests.get(
-        f"http://127.0.0.1:5000/get-content/books?book_id={book_id}")
+        f"http://192.168.1.3:5000/get-content/books?book_id={book_id}",headers=headers)
     booker = booker.json()[0]
     issues = requests.get(
-        f"http://127.0.0.1:5000/get-content/issues?book_id={book_id}")
+        f"http://192.168.1.3:5000/get-content/issues?book_id={book_id}",headers=headers)
     if issues.status_code == 200:
         issues = issues.json()
     else:
         issues = []
     requester = requests.get(
-        f"http://127.0.0.1:5000/get-content/requests?book_id={book_id}")
+        f"http://192.168.1.3:5000/get-content/requests?book_id={book_id}",headers=headers)
     if requester.status_code == 200:
         requester = requester.json()
     else:
         requester = []
     rater = requests.get(
-        f"http://127.0.0.1:5000/get-content/ratings?book_id={book_id}")
+        f"http://192.168.1.3:5000/get-content/ratings?book_id={book_id}",headers=headers)
     if rater.status_code == 200:
         rater = [float(i['rating']) for i in rater.json()]
     else:
@@ -617,22 +862,32 @@ def getLibrarianBooks():
 
 
 @app.route("/get-librarian/previewSection", methods=["GET"])
+@token_required
 def getLibrarianSections():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     section_id = request.args.to_dict()["section_id"]
     sectioner = requests.get(
-        f"http://127.0.0.1:5000/get-content/sections?section_id={section_id}")
+        f"http://192.168.1.3:5000/get-content/sections?section_id={section_id}",headers=headers)
     sectioner = sectioner.json()[0]
     return sectioner, 200
 
 
 @app.route("/get-librarian/previewAuthor", methods=["GET"])
+@token_required
 def getLibrarianAuthor():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     author_id = request.args.to_dict()["author_id"]
     sectioner = requests.get(
-        f"http://127.0.0.1:5000/get-content/authors?author_id={author_id}")
+        f"http://192.168.1.3:5000/get-content/authors?author_id={author_id}",headers=headers)
     sectioner = sectioner.json()[0]
     booker = requests.get(
-        f"http://127.0.0.1:5000/get-content/books?author_id={author_id}")
+        f"http://192.168.1.3:5000/get-content/books?author_id={author_id}",headers=headers)
     if booker.status_code == 200:
         booker = booker.json()
     else:
@@ -641,7 +896,12 @@ def getLibrarianAuthor():
 
 
 @app.route("/get-librarian/requests", methods=["GET"])
+@token_required
 def getLibrarianRequests():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     requests = db.session.query(Requests, Books, Users).join(Books, Books.book_id == Requests.book_id).join(
         Users, Users.user_id == Requests.user_id).order_by(Requests.request_date.desc()).all()
     allRequests = []
@@ -658,7 +918,12 @@ def getLibrarianRequests():
 
 
 @app.route("/get-librarian/issues", methods=["GET"])
+@token_required
 def getLibrarianIssues():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     requests = db.session.query(Issues, Books, Users).join(Books, Books.book_id == Issues.book_id).join(
         Users, Users.user_id == Issues.user_id).order_by(Issues.doi.desc()).limit(100).all()
     allIssues = []
@@ -678,7 +943,12 @@ def getLibrarianIssues():
 
 
 @app.route("/get-librarian/current-user-issues")
+@token_required
 def getLibrarianCurrentIssues():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     user_id = request.args.to_dict()["user_id"]
     try:
         requests = db.session.query(Issues).join(
@@ -697,7 +967,12 @@ def getLibrarianCurrentIssues():
 
 
 @app.route("/get-statistics/librarian/users")
+@token_required
 def getStatisticsLibrarianUsers():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     issue_scores = db.session.query(Users.user_id, Users.user_name, func.count(Issues.sno).label(
         "issue_count")).join(Issues, Users.user_id == Issues.user_id).group_by(Users.user_id).all()
     rating_scores = db.session.query(Users.user_id, Users.user_name, func.count(Ratings.sno).label(
@@ -749,7 +1024,12 @@ def getStatisticsLibrarianUsers():
 
 
 @app.route("/get-statistics/librarian/books")
+@token_required
 def getStatisticsLibrarianBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     genre_issues = db.session.query(Books.genre, func.count(Issues.sno).label(
         "issue_count")).join(Issues, Books.book_id == Issues.book_id).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).order_by(Books.genre).limit(5).all()
     male_genres = db.session.query(
@@ -781,7 +1061,12 @@ def getStatisticsLibrarianBooks():
 
 
 @app.route("/get-statistics/librarian/authors")
+@token_required
 def getStatisticsLibrarianAuthors():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     avg_country = db.session.query(Authors.country, func.avg(Authors.avg_rating).label(
         "avg_rating")).group_by(Authors.country).order_by(desc(func.avg(Authors.avg_rating))).limit(10).all()
     count_country = db.session.query(Authors.country, func.count(Authors.avg_rating).label(
@@ -827,10 +1112,15 @@ def getStatisticsLibrarianAuthors():
 
 # Data Insertion
 @app.route("/push-content/books", methods=["GET", "POST"])
+@token_required
 def pushBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/books?book_name={form['book_name']}"
-    fetcher = requests.get(roger)
+    roger = f"http://192.168.1.3:5000/get-content/books?book_name={form['book_name']}"
+    fetcher = requests.get(roger,headers=headers)
     if request.method == "POST":
         if fetcher.status_code == 404:
             last_id = Books.query.order_by(
@@ -854,14 +1144,19 @@ def pushBooks():
 
 
 @app.route("/push-content/newBook", methods=["GET", "POST"])
+@token_required
 def pushNewBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/books?book_name={form['book_name']}"
-    fetcher = requests.get(roger)
+    roger = f"http://192.168.1.3:5000/get-content/books?book_name={form['book_name']}"
+    fetcher = requests.get(roger,headers=headers)
     if request.method == "POST":
         if fetcher.status_code == 404:
-            rogerAuthor = f"http://127.0.0.1:5000/get-content/authors?author_name={form['author_name']}"
-            fetcherAuthor = requests.get(rogerAuthor)
+            rogerAuthor = f"http://192.168.1.3:5000/get-content/authors?author_name={form['author_name']}"
+            fetcherAuthor = requests.get(rogerAuthor,headers=headers)
             if fetcherAuthor.status_code == 404:
                 abort(
                     406, description=f"Author with name: {form['author_name']} not found. Create new author.")
@@ -888,10 +1183,15 @@ def pushNewBooks():
 
 
 @app.route("/push-content/authors", methods=["GET", "POST"])
+@token_required
 def pushAuthors():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/authors?author_name={form['author_name']}"
-    fetcher = requests.get(roger)
+    roger = f"http://192.168.1.3:5000/get-content/authors?author_name={form['author_name']}"
+    fetcher = requests.get(roger,headers=headers)
     if request.method == "POST":
         if fetcher.status_code == 404:
             last_id = Authors.query.order_by(
@@ -914,10 +1214,15 @@ def pushAuthors():
 
 
 @app.route("/push-content/users", methods=["GET", "POST"])
+@token_required
 def pushUsers():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/users?email={form['email']}"
-    fetcher = requests.get(roger)
+    roger = f"http://192.168.1.3:5000/get-content/users?email={form['email']}"
+    fetcher = requests.get(roger,headers=headers)
     if request.method == "POST":
         if fetcher.status_code == 404:
             last_id = Users.query.order_by(
@@ -942,10 +1247,15 @@ def pushUsers():
 
 
 @app.route("/push-content/sections", methods=["GET", "POST"])
+@token_required
 def pushSections():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/sections?section_name={form['section_name']}"
-    fetcher = requests.get(roger)
+    roger = f"http://192.168.1.3:5000/get-content/sections?section_name={form['section_name']}"
+    fetcher = requests.get(roger,headers=headers)
     if request.method == "POST":
         if fetcher.status_code == 404:
             last_id = Sections.query.order_by(
@@ -965,10 +1275,15 @@ def pushSections():
 
 
 @app.route("/push-content/ratings", methods=["GET", "POST"])
+@token_required
 def pushRatings():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
-    fetcher = requests.get(roger)
+    roger = f"http://192.168.1.3:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
+    fetcher = requests.get(roger,headers=headers)
     if request.method == "POST":
         if fetcher.status_code == 404:
             last_id = Ratings.query.order_by(Ratings.sno.desc()).first().sno
@@ -988,10 +1303,15 @@ def pushRatings():
 
 
 @app.route("/push-content/issues", methods=["GET", "POST"])
+@token_required
 def pushIssues():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/issues?book_id={form['book_id']}&user_id={form['user_id']}"
-    fetcher = requests.get(roger)
+    roger = f"http://192.168.1.3:5000/get-content/issues?book_id={form['book_id']}&user_id={form['user_id']}"
+    fetcher = requests.get(roger,headers=headers)
     if request.method == "POST":
         if fetcher.status_code == 404:
             last_id = Issues.query.order_by(Issues.sno.desc()).first().sno
@@ -1016,10 +1336,15 @@ def pushIssues():
 
 
 @app.route("/push-content/requests", methods=["GET"])
+@token_required
 def pushRequests():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.args.to_dict()
-    # roger = f"http://127.0.0.1:5000/get-content/requests?book_id={form['book_id']}&user_id={form['user_id']}"
-    # fetcher = requests.get(roger)
+    # roger = f"http://192.168.1.3:5000/get-content/requests?book_id={form['book_id']}&user_id={form['user_id']}"
+    # fetcher = requests.get(roger,headers=headers)
     # if fetcher.status_code == 404:
     new_issue = Requests(
         book_id=form["book_id"],
@@ -1035,10 +1360,15 @@ def pushRequests():
 
 
 @app.route("/push-content/blacklists", methods=["GET", "POST"])
+@token_required
 def pushBan():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/blacklists?user_id={form['user_id']}"
-    fetcher = requests.get(roger)
+    roger = f"http://192.168.1.3:5000/get-content/blacklists?user_id={form['user_id']}"
+    fetcher = requests.get(roger,headers=headers)
     if fetcher.status_code == 404:
         new_ban = Blacklists(
             user_id=form["user_id"],
@@ -1054,7 +1384,12 @@ def pushBan():
 
 # Data Updation
 @app.route("/put-content/books", methods=["GET", "PUT"])
+@token_required
 def putBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
     fetcher = Books.query.filter_by(book_id=form["book_id"]).first()
     if request.method == "PUT":
@@ -1065,15 +1400,20 @@ def putBooks():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/books?book_id={form['book_id']}"
-            fetcher = requests.get(roger).json()
+            roger = f"http://192.168.1.3:5000/get-content/books?book_id={form['book_id']}"
+            fetcher = requests.get(roger,headers=headers).json()
             return fetcher, 200
         else:
             return {"message": "Book do not exists."}, 406
 
 
 @app.route("/put-content/authors", methods=["GET", "PUT"])
+@token_required
 def putAuthors():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
     fetcher = Authors.query.filter_by(author_id=form["author_id"]).first()
     if request.method == "PUT":
@@ -1084,15 +1424,20 @@ def putAuthors():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/authors?author_id={form['author_id']}"
-            fetcher = requests.get(roger).json()
+            roger = f"http://192.168.1.3:5000/get-content/authors?author_id={form['author_id']}"
+            fetcher = requests.get(roger,headers=headers).json()
             return fetcher, 200
         else:
             return {"message": "Author do not exists."}, 406
 
 
 @app.route("/put-content/users", methods=["GET", "PUT"])
+@token_required
 def putUsers():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
     fetcher = Users.query.filter_by(user_id=form["user_id"]).first()
     if request.method == "PUT":
@@ -1103,15 +1448,20 @@ def putUsers():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/users?user_id={form['user_id']}"
-            fetcher = requests.get(roger).json()
+            roger = f"http://192.168.1.3:5000/get-content/users?user_id={form['user_id']}"
+            fetcher = requests.get(roger,headers=headers).json()
             return fetcher, 200
         else:
             return {"message": "User do not exists."}, 406
 
 
 @app.route("/put-content/sections", methods=["GET", "PUT"])
+@token_required
 def putSections():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
     fetcher = Sections.query.filter_by(section_id=form["section_id"]).first()
     if request.method == "PUT":
@@ -1122,15 +1472,20 @@ def putSections():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/sections?section_id={form['section_id']}"
-            fetcher = requests.get(roger).json()
+            roger = f"http://192.168.1.3:5000/get-content/sections?section_id={form['section_id']}"
+            fetcher = requests.get(roger,headers=headers).json()
             return fetcher, 200
         else:
             return {"message": "Section do not exists."}, 406
 
 
 @app.route("/put-content/ratings", methods=["GET", "PUT"])
+@token_required
 def putRatings():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
     fetcher = Ratings.query.filter_by(
         book_id=form["book_id"], user_id=form["user_id"]).first()
@@ -1142,15 +1497,20 @@ def putRatings():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
-            fetcher = requests.get(roger).json()
+            roger = f"http://192.168.1.3:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
+            fetcher = requests.get(roger,headers=headers).json()
             return fetcher, 200
         else:
             return {"message": "Rating do not exists."}, 406
 
 
 @app.route("/put-content/issues", methods=["GET", "PUT"])
+@token_required
 def putIssues():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
     fetcher = Issues.query.filter_by(
         book_id=form["book_id"], user_id=form["user_id"]).first()
@@ -1165,7 +1525,12 @@ def putIssues():
 
 
 @app.route("/put-content/blacklists", methods=["GET", "PUT"])
+@token_required
 def putBan():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     form = request.get_json()
     fetcher = Blacklists.query.filter_by(user_id=form["user_id"]).first()
     if request.method == "PUT":
@@ -1183,7 +1548,12 @@ def putBan():
 
 # Data Deletion
 @app.route("/delete-content/books", methods=["GET", "DELETE"])
+@token_required
 def deleteBooks():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     fetcher = Books.query.filter_by(book_id=args["book_id"]).first()
     if fetcher:
@@ -1195,7 +1565,12 @@ def deleteBooks():
 
 
 @app.route("/delete-content/authors", methods=["GET", "DELETE"])
+@token_required
 def deleteAuthors():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     fetcher = Authors.query.filter_by(author_id=args["author_id"]).first()
     if fetcher:
@@ -1207,7 +1582,12 @@ def deleteAuthors():
 
 
 @app.route("/delete-content/users", methods=["GET", "DELETE"])
+@token_required
 def deleteUsers():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     fetcher = Users.query.filter_by(user_id=args["user_id"]).first()
     if fetcher:
@@ -1219,7 +1599,12 @@ def deleteUsers():
 
 
 @app.route("/delete-content/sections", methods=["GET", "DELETE"])
+@token_required
 def deleteSections():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     fetcher = Sections.query.filter_by(section_id=args["section_id"]).first()
     if fetcher:
@@ -1231,7 +1616,12 @@ def deleteSections():
 
 
 @app.route("/delete-content/ratings", methods=["GET", "DELETE"])
+@token_required
 def deleteRatings():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     fetcher = Ratings.query.filter_by(
         book_id=args["book_id"], user_id=args["user_id"]).first()
@@ -1244,7 +1634,12 @@ def deleteRatings():
 
 
 @app.route("/delete-content/issues", methods=["GET", "DELETE"])
+@token_required
 def deleteIssues():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     fetcher = Issues.query.filter_by(
         book_id=args["book_id"], user_id=args["user_id"]).first()
@@ -1257,7 +1652,12 @@ def deleteIssues():
 
 
 @app.route("/delete-content/requests", methods=["GET", "DELETE"])
+@token_required
 def deleteRequests():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     fetcher = Requests.query.filter_by(
         book_id=args["book_id"], user_id=args["user_id"]).first()
@@ -1270,7 +1670,12 @@ def deleteRequests():
 
 
 @app.route("/delete-content/blacklists", methods=["GET", "DELETE"])
+@token_required
 def deleteBan():
+    token = request.headers.get('x-access-token')
+    headers = {
+        'x-access-token': token
+    }
     args = request.args.to_dict()
     fetcher = Blacklists.query.filter_by(user_id=args["user_id"]).first()
     if fetcher:
@@ -1301,4 +1706,4 @@ def not_acceptable(e):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0',debug=True)

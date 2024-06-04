@@ -57,7 +57,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import axios from "@/axios";
 export default {
   name: "FeedbackCards",
   props: {
@@ -104,7 +104,7 @@ export default {
       if (this.dumStarRating != 0 && this.feedbackText != "") {
         try {
           const response = await axios.put(
-            "http://127.0.0.1:5000/put-content/ratings",
+            "http://192.168.1.3:5000/put-content/ratings",
             {
               book_id: this.bookDetails.book_id,
               user_id: this.user_id,

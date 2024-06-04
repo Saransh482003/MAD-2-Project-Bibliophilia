@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <AppNavbar gender="male" v-if="!no_nav.includes($route.name)" />
+    <AppNavbar :gender="gender" v-if="!no_nav.includes($route.name)" />
     <LibrarianNavbar v-else-if="$route.name !== 'signin'" />
     <router-view />
   </div>
@@ -39,6 +39,7 @@
 </style>
 
 <script>
+// import axios from "@/axios";
 import AppNavbar from "./components/AppNavbar.vue";
 import LibrarianNavbar from "./components/LibrarianNavbar.vue";
 export default {
@@ -50,7 +51,12 @@ export default {
   data() {
     return {
       no_nav: ["librarian", "signin"],
+      gender: "Male",
     };
+  },
+
+  beforeMount() {
+    this.gender = localStorage.getItem("user_gender");
   },
 };
 </script>

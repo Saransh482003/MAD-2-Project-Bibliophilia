@@ -1196,7 +1196,7 @@
 </template>
 
 <script>
-import axios from "axios";
+import axios from "@/axios";
 import SideNav from "@/components/SideNav.vue";
 import BarChartView from "@/components/BarChartView.vue";
 import PieChartView from "@/components/PieChartView.vue";
@@ -1315,7 +1315,7 @@ export default {
     },
     fetchLatest() {
       axios
-        .get(`http://127.0.0.1:5000/get-content/latestBooks`)
+        .get(`http://192.168.1.3:5000/get-content/librarian/latestBooks`)
         .then((response) => {
           this.searchBooks = {
             titles: [],
@@ -1332,7 +1332,7 @@ export default {
     bookSearcher() {
       let keyword = document.getElementById("searchbox").value;
       axios
-        .get(`http://127.0.0.1:5000/search-content?keyword=${keyword}`, {
+        .get(`http://192.168.1.3:5000/search-content?keyword=${keyword}`, {
           params: {
             keyword: keyword,
           },
@@ -1378,7 +1378,7 @@ export default {
     },
     fetchAuthorsStats() {
       axios
-        .get(`http://127.0.0.1:5000/get-statistics/librarian/authors`)
+        .get(`http://192.168.1.3:5000/get-statistics/librarian/authors`)
         .then((response) => {
           this.authorsStatsData = response.data;
           console.log(this.bookStatsData);
@@ -1389,7 +1389,7 @@ export default {
     },
     fetchBooksStats() {
       axios
-        .get(`http://127.0.0.1:5000/get-statistics/librarian/books`)
+        .get(`http://192.168.1.3:5000/get-statistics/librarian/books`)
         .then((response) => {
           this.bookStatsData = response.data;
           console.log(this.bookStatsData);
@@ -1400,7 +1400,7 @@ export default {
     },
     fetchUsersStats() {
       axios
-        .get(`http://127.0.0.1:5000/get-statistics/librarian/users`)
+        .get(`http://192.168.1.3:5000/get-statistics/librarian/users`)
         .then((response) => {
           this.userStatsData = response.data;
         })
@@ -1411,7 +1411,7 @@ export default {
     async banUser(user_id) {
       try {
         const response = await axios.post(
-          "http://127.0.0.1:5000/push-content/blacklists",
+          "http://192.168.1.3:5000/push-content/blacklists",
           {
             user_id: user_id,
             ban_type: "Perma",
@@ -1427,7 +1427,7 @@ export default {
     async revokeBan(user_id) {
       try {
         const response = await axios.delete(
-          `http://127.0.0.1:5000/delete-content/blacklists?user_id=${user_id}`
+          `http://192.168.1.3:5000/delete-content/blacklists?user_id=${user_id}`
         );
         this.changePreviewUser(user_id);
         console.log("Success:", response.data);
@@ -1438,7 +1438,7 @@ export default {
     async interdictUser(user_id) {
       try {
         const response = await axios.post(
-          "http://127.0.0.1:5000/push-content/blacklists",
+          "http://192.168.1.3:5000/push-content/blacklists",
           {
             user_id: user_id,
             ban_type: "Temp",
@@ -1453,7 +1453,7 @@ export default {
     async revokeInterdict(user_id) {
       try {
         const response = await axios.delete(
-          `http://127.0.0.1:5000/delete-content/blacklists?user_id=${user_id}`
+          `http://192.168.1.3:5000/delete-content/blacklists?user_id=${user_id}`
         );
         this.changePreviewUser(user_id);
         console.log("Success:", response.data);
@@ -1464,7 +1464,7 @@ export default {
     rejectIssue(book_id, user_id) {
       axios
         .get(
-          `http://127.0.0.1:5000/delete-content/requests?book_id=${book_id}&user_id=${user_id}`
+          `http://192.168.1.3:5000/delete-content/requests?book_id=${book_id}&user_id=${user_id}`
         )
         .then((response) => {
           this.fetchRequests();
@@ -1477,12 +1477,12 @@ export default {
     async acceptIssue(book_id, user_id) {
       try {
         const responser = await axios.get(
-          `http://127.0.0.1:5000/get-librarian/current-user-issues?user_id=${user_id}`
+          `http://192.168.1.3:5000/get-librarian/current-user-issues?user_id=${user_id}`
         );
         if (responser.data.count + 1 <= 5) {
           try {
             const response = await axios.post(
-              "http://127.0.0.1:5000/push-content/issues",
+              "http://192.168.1.3:5000/push-content/issues",
               {
                 book_id: book_id,
                 user_id: user_id,
@@ -1506,7 +1506,7 @@ export default {
     async revokeIssue(book_id, user_id) {
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/issues",
+          "http://192.168.1.3:5000/put-content/issues",
           {
             book_id: book_id,
             user_id: user_id,
@@ -1522,7 +1522,7 @@ export default {
     },
     fetchBooks() {
       axios
-        .get("http://127.0.0.1:5000/get-content/latestBooks")
+        .get("http://192.168.1.3:5000/get-content/latestBooks")
         .then((response) => {
           this.books = response.data;
           this.changePreviewBook(this.books[0].book_id);
@@ -1533,7 +1533,7 @@ export default {
     },
     fetchSections() {
       axios
-        .get("http://127.0.0.1:5000/get-content/sections")
+        .get("http://192.168.1.3:5000/get-content/sections")
         .then((response) => {
           this.sections = response.data;
           this.changePreviewSection(this.sections[0].section_id);
@@ -1544,7 +1544,7 @@ export default {
     },
     fetchAuthors() {
       axios
-        .get("http://127.0.0.1:5000/get-content/authors")
+        .get("http://192.168.1.3:5000/get-content/authors")
         .then((response) => {
           this.authors = response.data;
           this.changePreviewAuthor(this.authors[0].author_id);
@@ -1555,7 +1555,7 @@ export default {
     },
     fetchUsers() {
       axios
-        .get("http://127.0.0.1:5000/get-content/users")
+        .get("http://192.168.1.3:5000/get-content/users")
         .then((response) => {
           this.users = response.data;
           this.changePreviewUser(this.users[0].user_id);
@@ -1566,7 +1566,7 @@ export default {
     },
     fetchRequests() {
       axios
-        .get("http://127.0.0.1:5000/get-librarian/requests")
+        .get("http://192.168.1.3:5000/get-librarian/requests")
         .then((response) => {
           this.allRequests = response.data;
         })
@@ -1576,7 +1576,7 @@ export default {
     },
     fetchIssues() {
       axios
-        .get("http://127.0.0.1:5000/get-librarian/issues")
+        .get("http://192.168.1.3:5000/get-librarian/issues")
         .then((response) => {
           this.allIssues = response.data;
         })
@@ -1587,7 +1587,7 @@ export default {
     createBook() {
       this.addBookPallet = true;
       axios
-        .get("http://127.0.0.1:5000/get-content/sections")
+        .get("http://192.168.1.3:5000/get-content/sections")
         .then((response) => {
           this.sections = response.data;
         })
@@ -1604,7 +1604,7 @@ export default {
     getGenres() {
       axios
         .get(
-          `http://127.0.0.1:5000/get-content/books?section_id=${this.selectedSection}`
+          `http://192.168.1.3:5000/get-content/books?section_id=${this.selectedSection}`
         )
         .then((response) => {
           let genres = response.data.map((element) => element.genre);
@@ -1624,7 +1624,7 @@ export default {
       ) {
         try {
           const response = await axios.post(
-            "http://127.0.0.1:5000/push-content/newBook",
+            "http://192.168.1.3:5000/push-content/newBook",
             {
               book_name: this.createBookName,
               img: this.createBookImg,
@@ -1654,7 +1654,7 @@ export default {
       if (this.createSectionImg != "" && this.createSectionName != "") {
         try {
           const response = await axios.post(
-            "http://127.0.0.1:5000/push-content/sections",
+            "http://192.168.1.3:5000/push-content/sections",
             {
               section_name: this.createSectionName,
               img: this.createSectionImg,
@@ -1689,7 +1689,7 @@ export default {
       ) {
         try {
           const response = await axios.post(
-            "http://127.0.0.1:5000/push-content/authors",
+            "http://192.168.1.3:5000/push-content/authors",
             {
               author_name: this.createAuthorName,
               img: this.createAuthorImg,
@@ -1731,7 +1731,7 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/books",
+          "http://192.168.1.3:5000/put-content/books",
           {
             book_id: this.previewBook.book.book_id,
             book_name: this.titleNew,
@@ -1758,7 +1758,7 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/books",
+          "http://192.168.1.3:5000/put-content/books",
           {
             book_id: this.previewBook.book.book_id,
             genre: this.genreNew,
@@ -1785,14 +1785,14 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/books",
+          "http://192.168.1.3:5000/put-content/books",
           {
             book_id: this.previewBook.book.book_id,
             author_name: this.authorNew,
           }
         );
         const responseAuthor = await axios.put(
-          "http://127.0.0.1:5000/put-content/authors",
+          "http://192.168.1.3:5000/put-content/authors",
           {
             author_id: this.previewBook.book.author_id,
             author_name: this.authorNew,
@@ -1819,7 +1819,7 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/sections",
+          "http://192.168.1.3:5000/put-content/sections",
           {
             section_id: this.previewSection.section_id,
             section_name: this.sectionTitleNew,
@@ -1846,7 +1846,7 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/authors",
+          "http://192.168.1.3:5000/put-content/authors",
           {
             author_id: this.previewAuthor.author_id,
             author_name: this.authorNameNew,
@@ -1873,7 +1873,7 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/authors",
+          "http://192.168.1.3:5000/put-content/authors",
           {
             author_id: this.previewAuthor.author_id,
             dob: this.authorDOBNew,
@@ -1900,7 +1900,7 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/authors",
+          "http://192.168.1.3:5000/put-content/authors",
           {
             author_id: this.previewAuthor.author_id,
             dod: this.authorDODNew,
@@ -1927,7 +1927,7 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/authors",
+          "http://192.168.1.3:5000/put-content/authors",
           {
             author_id: this.previewAuthor.author_id,
             country: this.authorCountryNew,
@@ -1954,7 +1954,7 @@ export default {
       event.stopPropagation();
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/authors",
+          "http://192.168.1.3:5000/put-content/authors",
           {
             author_id: this.previewAuthor.author_id,
             avg_rating: this.authorRatingNew,
@@ -1970,7 +1970,7 @@ export default {
     async deleteBook(book_id) {
       try {
         const response = await axios.delete(
-          `http://127.0.0.1:5000/delete-content/books?book_id=${book_id}`
+          `http://192.168.1.3:5000/delete-content/books?book_id=${book_id}`
         );
         console.log("Success:", response.data);
         this.fetchBooks();
@@ -1981,7 +1981,7 @@ export default {
     async deleteSection(section_id) {
       try {
         const response = await axios.delete(
-          `http://127.0.0.1:5000/delete-content/sections?section_id=${section_id}`
+          `http://192.168.1.3:5000/delete-content/sections?section_id=${section_id}`
         );
         console.log("Success:", response.data);
         this.fetchSections();
@@ -1992,7 +1992,7 @@ export default {
     async deleteAuthor(author_id) {
       try {
         const response = await axios.delete(
-          `http://127.0.0.1:5000/delete-content/authors?author_id=${author_id}`
+          `http://192.168.1.3:5000/delete-content/authors?author_id=${author_id}`
         );
         console.log("Success:", response.data);
         this.fetchAuthors();
@@ -2011,7 +2011,7 @@ export default {
       this.addBookPallet = false;
       axios
         .get(
-          `http://127.0.0.1:5000/get-librarian/previewBook?book_id=${book_id}`
+          `http://192.168.1.3:5000/get-librarian/previewBook?book_id=${book_id}`
         )
         .then((response) => {
           this.previewBook = response.data;
@@ -2026,7 +2026,7 @@ export default {
       console.log(section_id);
       axios
         .get(
-          `http://127.0.0.1:5000/get-librarian/previewSection?section_id=${section_id}`
+          `http://192.168.1.3:5000/get-librarian/previewSection?section_id=${section_id}`
         )
         .then((response) => {
           this.previewSection = response.data;
@@ -2039,7 +2039,9 @@ export default {
     changePreviewAuthor(author_id) {
       this.addAuthorPallet = false;
       axios
-        .get(`http://127.0.0.1:5000/get-content/authors?author_id=${author_id}`)
+        .get(
+          `http://192.168.1.3:5000/get-content/authors?author_id=${author_id}`
+        )
         .then((response) => {
           this.previewAuthor = response.data[0];
           // this.previewBook.avg_rating = this.previewBook.avg_rating.toFixed(1);
@@ -2050,7 +2052,7 @@ export default {
     },
     changePreviewUser(user_id) {
       axios
-        .get(`http://127.0.0.1:5000/get-content/users?user_id=${user_id}`)
+        .get(`http://192.168.1.3:5000/get-content/users?user_id=${user_id}`)
         .then((response) => {
           this.previewUser = response.data[0];
           this.previewUser.doj = this.formatDate(this.previewUser.doj);
@@ -2060,7 +2062,7 @@ export default {
 
           axios
             .get(
-              `http://127.0.0.1:5000/get-statistics?user_id=${response.data[0].user_id}`
+              `http://192.168.1.3:5000/get-statistics?user_id=${response.data[0].user_id}`
             )
             .then((responseStats) => {
               this.userStats = responseStats.data;
@@ -2077,7 +2079,7 @@ export default {
 
           axios
             .get(
-              `http://127.0.0.1:5000/get-content/blacklists?user_id=${user_id}`
+              `http://192.168.1.3:5000/get-content/blacklists?user_id=${user_id}`
             )
             .then((response) => {
               this.banData["ban_type"] = response.data[0].ban_type;

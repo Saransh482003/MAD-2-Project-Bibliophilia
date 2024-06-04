@@ -105,7 +105,7 @@
             <div class="d1profile">
               <div class="d1profilePicContainer">
                 <img
-                  v-if="statsData.user_info.gender == 'male'"
+                  v-if="statsData.user_info.gender == 'Male'"
                   src="@/assets/images/male profile.png"
                   alt="username"
                   class="d1profilePic"
@@ -126,7 +126,7 @@
                   Date Joined: <span>{{ statsData.user_info.doj }}</span>
                 </p>
                 <p class="d1profileEmail">
-                  Last Loged: <span>{{ statsData.user_info.last_loged }}</span>
+                  Last Logged: <span>{{ statsData.user_info.last_loged }}</span>
                 </p>
               </div>
             </div>
@@ -258,7 +258,7 @@
       </div>
     </div>
     <div class="mainPanel" v-if="changeMyBookView == 4">
-      <div class="feedbackChamber">
+      <div class="feedbackChamber" v-if="feedbackBooks.length > 0">
         <p class="myBooksHead feedbackHead">NOT RATED BOOKS</p>
         <NotFeedbackCards
           v-for="(feedback, index) in feedbackBooks['Not Rated']"
@@ -267,7 +267,11 @@
           :user_id="user_id"
         />
       </div>
-      <div class="feedbackChamber" style="margin-top: 2rem">
+      <div
+        class="feedbackChamber"
+        style="margin-top: 2rem"
+        v-if="feedbackBooks.length > 0"
+      >
         <p class="myBooksHead feedbackHead">RATED BOOKS</p>
         <FeedbackCards
           v-for="(feedback, index) in feedbackBooks['Rated']"
@@ -276,12 +280,17 @@
           :user_id="user_id"
         />
       </div>
+      <div class="feedbackChamber" style="margin-top: 2rem" v-else>
+        <p class="myBooksHead feedbackHead">
+          YOU HAVE NO ISSUED BOOKS TO GIVE FEEDBACK
+        </p>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import axios from "axios";
+import axios from "@/axios";
 import BarChartView from "@/components/BarChartView.vue";
 import PieChartView from "@/components/PieChartView.vue";
 import DataCards from "@/components/DataCards.vue";
@@ -309,12 +318,15 @@ export default {
       statsData: [],
       feedbackBooks: [],
       hoveredStar: 0,
-      user_id: "REPA0354",
+      user_id: localStorage.getItem("user_id"),
     };
   },
   created() {
     this.changeMyBookView = 1;
     this.fetchMyBooks();
+  },
+  mounted() {
+    this.user_id = localStorage.getItem("user_id");
   },
   methods: {
     changeMiddleView(view) {
@@ -333,7 +345,7 @@ export default {
     fetchMyBooks() {
       axios
         .get(
-          `http://127.0.0.1:5000/get-content/myBooks?user_id=${this.user_id}`
+          `http://192.168.1.3:5000/get-content/myBooks?user_id=${this.user_id}`
         )
         .then((response) => {
           this.myBooks = response.data["Current"];
@@ -341,14 +353,15 @@ export default {
           // this.changePreviewBook(this.myBooks[0].book_id);
         })
         .catch(() => {
-          this.$router.push("/error");
+          this.myBooks = [];
         });
     },
     fetchStatistics() {
       axios
-        .get(`http://127.0.0.1:5000/get-statistics?user_id=${this.user_id}`)
+        .get(`http://192.168.1.3:5000/get-statistics?user_id=${this.user_id}`)
         .then((response) => {
           this.statsData = response.data;
+          console.log(this.statsData);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -356,12 +369,12 @@ export default {
     },
     fetchFeedbacks() {
       axios
-        .get(`http://127.0.0.1:5000/get-feedbacks?user_id=${this.user_id}`)
+        .get(`http://192.168.1.3:5000/get-feedbacks?user_id=${this.user_id}`)
         .then((response) => {
           this.feedbackBooks = response.data;
         })
         .catch(() => {
-          this.$router.push("/error");
+          this.feedbackBooks = [];
         });
     },
     starHover(index, starNum) {
@@ -389,7 +402,7 @@ export default {
     bookSearcher() {
       let keyword = document.getElementById("searchbox").value;
       axios
-        .get(`http://127.0.0.1:5000/search-content/my-books`, {
+        .get(`http://192.168.1.3:5000/search-content/my-books`, {
           params: {
             user_id: this.user_id,
             keyword: keyword,
@@ -414,7 +427,7 @@ export default {
     async returnBook(book_id) {
       try {
         const response = await axios.put(
-          "http://127.0.0.1:5000/put-content/issues",
+          "http://192.168.1.3:5000/put-content/issues",
           {
             book_id: book_id,
             user_id: this.user_id,

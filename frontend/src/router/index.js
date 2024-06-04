@@ -16,7 +16,7 @@ const routes = [
     component: ErrorPage,
   },
   {
-    path: "/",
+    path: "/home",
     name: "home",
     component: HomeView,
   },
@@ -36,7 +36,7 @@ const routes = [
     component: LibrarianView,
   },
   {
-    path: "/signin",
+    path: "/",
     name: "signin",
     component: UserSignin,
   },
