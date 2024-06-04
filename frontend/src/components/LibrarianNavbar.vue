@@ -8,7 +8,7 @@
           class="logoImg"
         />
       </div>
-      <p class="logoText">Bibliophilia</p>
+      <p class="logoText">Bibliophilia<span>LIBRARIAN</span></p>
     </router-link>
     <div class="navLinks">
       <router-link to="/librarian" class="link">Dashboard</router-link>
@@ -43,7 +43,7 @@ export default {
 .logo {
   display: flex;
   align-items: center;
-  width: 25%;
+  width: 26%;
 }
 .logoContainer {
   display: flex;
@@ -66,6 +66,10 @@ export default {
   font-family: "Insomnia";
   font-weight: 900;
   color: #25352b;
+}
+.logoText span {
+  font-size: 0.8rem;
+  letter-spacing: 1px;
 }
 .navLinks {
   display: flex;

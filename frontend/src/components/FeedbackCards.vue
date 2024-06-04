@@ -103,15 +103,12 @@ export default {
     async editRating() {
       if (this.dumStarRating != 0 && this.feedbackText != "") {
         try {
-          const response = await axios.put(
-            "http://192.168.1.3:5000/put-content/ratings",
-            {
-              book_id: this.bookDetails.book_id,
-              user_id: this.user_id,
-              rating: this.dumStarRating,
-              feedback: this.feedbackText,
-            }
-          );
+          const response = await axios.put("/put-content/ratings", {
+            book_id: this.bookDetails.book_id,
+            user_id: this.user_id,
+            rating: this.dumStarRating,
+            feedback: this.feedbackText,
+          });
           console.log("Success:", response.data);
           window.location.reload();
         } catch (error) {

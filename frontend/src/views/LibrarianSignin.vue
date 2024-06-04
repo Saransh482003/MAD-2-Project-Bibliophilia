@@ -8,16 +8,17 @@
           class="logoImg"
         />
       </div>
-      <p class="logoText">Bibliophilia</p>
+      <p class="logoText">Bibliophilia<span>LIBRARIAN</span></p>
     </div>
     <div class="signinMainFrame">
       <div class="signinBox">
         <div class="info">
-          <p class="welcome">Welcome to</p>
+          <p class="welcome">Welcome back to</p>
           <p class="title">Bibliophilia</p>
           <p class="description">
-            Explore countless books, enjoy personalized picks, and join a
-            vibrant community. Dive into your next great read today!
+            Librarians are like search engines, but they smile and talk to you,
+            and they don't track your searches.
+            <span>~ Sun Tzu (probably)</span>
           </p>
           <div class="stats">
             <div class="statCard">
@@ -53,9 +54,9 @@
               <div class="statInfo">500 + <br />Active Users</div>
             </div>
           </div>
-          <p class="join">JOIN US NOW !!</p>
+          <p class="join">GET READY !!</p>
         </div>
-        <div class="desk" v-if="signinView">
+        <div class="desk">
           <p class="signHead">Sign In</p>
           <div class="inputDiv">
             <div class="inputImgCont">
@@ -65,7 +66,7 @@
                 class="inputImg"
               />
             </div>
-            <input v-model="username" placeholder="Enter Your Username" />
+            <input v-model="username" placeholder="Enter Your Librarian Key" />
           </div>
           <div class="inputDiv">
             <div class="inputImgCont">
@@ -90,93 +91,8 @@
               />
             </div>
           </div>
-          <p class="changeSign" @click="changeView()">
-            Don't have an account? Sign Up Now !!
-          </p>
           <div class="continue" @click="submit()">Continue →</div>
           <p class="message" v-if="message != ''">{{ message }}</p>
-        </div>
-
-        <div class="desk" v-else>
-          <p class="signHead">Sign Up</p>
-          <div class="inputDiv">
-            <div class="inputImgCont">
-              <img
-                src="@/assets/images/user_icon.png"
-                alt=""
-                class="inputImg"
-              />
-            </div>
-            <input v-model="username" placeholder="Enter Your Username" />
-          </div>
-          <div class="inputDiv">
-            <div class="inputImgCont">
-              <img src="@/assets/images/email.png" alt="" class="inputImg" />
-            </div>
-            <input
-              v-model="email"
-              type="email"
-              placeholder="Enter Your Email"
-            />
-          </div>
-          <div class="inputDiv">
-            <div class="inputImgCont">
-              <img src="@/assets/images/phone.png" alt="" class="inputImg" />
-            </div>
-            <input
-              v-model="phone"
-              type="tel"
-              placeholder="Enter Your Phone Number"
-            />
-          </div>
-          <div class="inputDiv transparentBG">
-            <div class="innerDiv">
-              <div class="inputImgCont">
-                <img src="@/assets/images/dob.png" alt="" class="inputImg" />
-              </div>
-              <input
-                v-model="dob"
-                type="date"
-                placeholder="Enter Your Date of Birth"
-              />
-            </div>
-            <div class="innerDiv">
-              <div class="inputImgCont">
-                <img src="@/assets/images/gender.png" alt="" class="inputImg" />
-              </div>
-              <select v-model="gender" class="genderDrop">
-                <option value="Male" selected>Male</option>
-                <option value="Female">Female</option>
-              </select>
-            </div>
-          </div>
-          <div class="inputDiv">
-            <div class="inputImgCont">
-              <img
-                src="@/assets/images/password_icon.png"
-                alt=""
-                class="inputImg"
-              />
-            </div>
-            <input
-              v-model="password"
-              placeholder="Enter Your Password"
-              :type="passwordView ? 'text' : 'password'"
-              style="width: 14rem"
-            />
-            <div class="inputImgCont" @click="passwordViewer()">
-              <img
-                src="@/assets/images/password_view.png"
-                alt=""
-                class="inputImg"
-                ref="viewer"
-              />
-            </div>
-          </div>
-          <p class="changeSign" @click="changeView()">
-            Have an account already? Sign In Now?
-          </p>
-          <div class="continue" @click="submit()">Continue →</div>
         </div>
       </div>
     </div>
@@ -186,24 +102,16 @@
 <script>
 import axios from "@/axios";
 export default {
-  name: "UserSignin",
+  name: "LibrarianSignin",
   data() {
     return {
       username: "",
       password: "",
-      email: "",
-      dob: "",
-      phone: "",
-      gender: "",
       passwordView: false,
-      signinView: true,
       message: "",
     };
   },
   methods: {
-    setUserID(user_id) {
-      this.$store.dispatch("updateUserID", user_id);
-    },
     passwordViewer() {
       this.passwordView = !this.passwordView;
       if (this.passwordView) {
@@ -212,108 +120,23 @@ export default {
         this.$refs.viewer.style.filter = "none";
       }
     },
-    changeView() {
-      this.username = "";
-      this.password = "";
-      this.email = "";
-      this.dob = "";
-      this.phone = "";
-      this.gender = "";
-      this.signinView = !this.signinView;
-    },
     async submit() {
-      if (this.signinView) {
-        if (this.username != "" && this.password != "") {
-          const response = await axios.post("/signin", {
-            user_name: this.username,
-            password: this.password,
-          });
-          if (response.data.code != 801) {
-            this.message = response.data.message;
-          } else {
-            if (
-              this.username == "Eren@Attack48" &&
-              this.password == "Tatakai#Forever"
-            ) {
-              window.location.href = `/librarian-signin`;
-            } else {
-              localStorage.setItem("token", response.data.token);
-              axios
-                .get(
-                  `/get-content/users?user_name=${this.username}&password=${this.password}`,
-                  {
-                    headers: {
-                      "x-access-token": response.data.token,
-                    },
-                  }
-                )
-                .then((responsible) => {
-                  // const queryParams = new URLSearchParams({
-                  //   userId: responsible.data[0].user_id,
-                  // });
-                  window.location.href = `/home`;
-                  localStorage.setItem("user_id", responsible.data[0].user_id);
-                  localStorage.setItem(
-                    "user_gender",
-                    responsible.data[0].gender
-                  );
-                })
-                .catch(() => {
-                  alert("There was an unexpected error.");
-                });
-            }
-          }
+      if (this.username != "" && this.password != "") {
+        const response = await axios.post("/librarian-signin", {
+          user_name: this.username,
+          password: this.password,
+        });
+        if (response.data.code != 801) {
+          this.message = response.data.message;
         } else {
-          alert(
-            "Please fill in both the Username and Password fields to proceed."
-          );
+          localStorage.setItem("librarian_token", response.data.token);
+          localStorage.setItem("token", response.data.token);
+          window.location.href = "/librarian";
         }
       } else {
-        if (
-          this.username != "" &&
-          this.password != "" &&
-          this.email != "" &&
-          this.dob != "" &&
-          this.phone != "" &&
-          this.gender != "" &&
-          this.email.includes("@")
-        ) {
-          const response = await axios.post("/signup", {
-            user_name: this.username,
-            password: this.password,
-            phone: this.phone,
-            email: this.email,
-            dob: this.dob,
-            gender: this.gender,
-          });
-          if (response.data.code == 805) {
-            this.signinView = !this.signinView;
-            this.message = response.data.message;
-          } else if (response.data.code == 801) {
-            axios
-              .get(
-                `/get-content/users?user_name=${this.username}&password=${this.password}`,
-                {
-                  headers: {
-                    "x-access-token": localStorage.getItem("token"),
-                  },
-                }
-              )
-              .then((responsible) => {
-                localStorage.setItem("user_id", responsible.data[0].user_id);
-                localStorage.setItem("user_gender", responsible.data[0].gender);
-                window.location.href = "/home";
-              })
-              .catch(() => {
-                alert("There was an unexpected error.");
-              });
-          }
-        } else {
-          if (!this.email.includes("@")) {
-            alert("Please enter a valid email id.");
-          }
-          alert("Please fill in all the fields to proceed.");
-        }
+        alert(
+          "Please fill in both the Username and Password fields to proceed."
+        );
       }
     },
     formatDate(dateString) {
@@ -328,7 +151,7 @@ export default {
 .baseRoot {
   height: 45.6rem;
   width: 100%;
-  background: url("@/assets/images/signin_bg.jpg");
+  background: url("https://wallpapercrafter.com/desktop/66717-firewatch-games-artist-digital-art.jpg");
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center center;
@@ -370,6 +193,10 @@ export default {
   font-family: "Insomnia";
   font-weight: 900;
   color: #25352b;
+}
+.logoText span {
+  font-size: 0.8rem;
+  letter-spacing: 1px;
 }
 .signinBox {
   display: flex;
@@ -417,6 +244,11 @@ export default {
   text-align: center;
   font-size: 0.8rem;
   margin-top: 3rem;
+}
+.description span {
+  font-style: italic;
+  color: rgb(72, 72, 72);
+  font-size: 0.7rem;
 }
 .stats {
   display: flex;

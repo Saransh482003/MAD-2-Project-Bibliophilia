@@ -6,6 +6,7 @@ import AboutView from "../views/AboutView.vue";
 import MyBooksView from "../views/MyBooksView.vue";
 import LibrarianView from "../views/LibrarianView.vue";
 import UserSignin from "../views/UserSignin.vue";
+import LibrarianSignin from "../views/LibrarianSignin.vue";
 
 Vue.use(VueRouter);
 
@@ -39,6 +40,11 @@ const routes = [
     path: "/",
     name: "signin",
     component: UserSignin,
+  },
+  {
+    path: "/librarian-signin",
+    name: "librarian-signin",
+    component: LibrarianSignin,
   },
 ];
 

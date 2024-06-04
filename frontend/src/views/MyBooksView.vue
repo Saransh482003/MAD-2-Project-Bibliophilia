@@ -344,9 +344,7 @@ export default {
     },
     fetchMyBooks() {
       axios
-        .get(
-          `http://192.168.1.3:5000/get-content/myBooks?user_id=${this.user_id}`
-        )
+        .get(`/get-content/myBooks?user_id=${this.user_id}`)
         .then((response) => {
           this.myBooks = response.data["Current"];
           this.myHistory = response.data["History"];
@@ -358,7 +356,7 @@ export default {
     },
     fetchStatistics() {
       axios
-        .get(`http://192.168.1.3:5000/get-statistics?user_id=${this.user_id}`)
+        .get(`/get-statistics?user_id=${this.user_id}`)
         .then((response) => {
           this.statsData = response.data;
           console.log(this.statsData);
@@ -369,7 +367,7 @@ export default {
     },
     fetchFeedbacks() {
       axios
-        .get(`http://192.168.1.3:5000/get-feedbacks?user_id=${this.user_id}`)
+        .get(`/get-feedbacks?user_id=${this.user_id}`)
         .then((response) => {
           this.feedbackBooks = response.data;
         })
@@ -402,7 +400,7 @@ export default {
     bookSearcher() {
       let keyword = document.getElementById("searchbox").value;
       axios
-        .get(`http://192.168.1.3:5000/search-content/my-books`, {
+        .get(`/search-content/my-books`, {
           params: {
             user_id: this.user_id,
             keyword: keyword,
@@ -426,13 +424,10 @@ export default {
     },
     async returnBook(book_id) {
       try {
-        const response = await axios.put(
-          "http://192.168.1.3:5000/put-content/issues",
-          {
-            book_id: book_id,
-            user_id: this.user_id,
-          }
-        );
+        const response = await axios.put("/put-content/issues", {
+          book_id: book_id,
+          user_id: this.user_id,
+        });
         console.log("Success:", response.data);
         this.fetchMyBooks();
       } catch (error) {

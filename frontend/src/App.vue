@@ -1,7 +1,9 @@
 <template>
   <div id="app">
     <AppNavbar :gender="gender" v-if="!no_nav.includes($route.name)" />
-    <LibrarianNavbar v-else-if="$route.name !== 'signin'" />
+    <LibrarianNavbar
+      v-else-if="$route.name !== 'signin' && $route.name !== 'librarian-signin'"
+    />
     <router-view />
   </div>
 </template>
@@ -50,7 +52,7 @@ export default {
   },
   data() {
     return {
-      no_nav: ["librarian", "signin"],
+      no_nav: ["librarian", "signin", "librarian-signin"],
       gender: "Male",
     };
   },
