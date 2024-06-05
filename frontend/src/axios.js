@@ -8,7 +8,7 @@ instance.interceptors.request.use(
   (config) => {
     const librarianRequest = config.headers["x-librarian-request"];
     if (librarianRequest) {
-      const librarianToken = localStorage.getItem("librarian_token");
+      const librarianToken = localStorage.getItem("librarian-token");
       if (librarianToken) {
         config.headers["x-access-token"] = librarianToken;
       }

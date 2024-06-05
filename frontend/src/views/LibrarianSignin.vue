@@ -111,6 +111,9 @@ export default {
       message: "",
     };
   },
+  mounted() {
+    localStorage.clear();
+  },
   methods: {
     passwordViewer() {
       this.passwordView = !this.passwordView;
@@ -129,7 +132,7 @@ export default {
         if (response.data.code != 801) {
           this.message = response.data.message;
         } else {
-          localStorage.setItem("librarian_token", response.data.token);
+          localStorage.setItem("librarian-token", response.data.token);
           localStorage.setItem("token", response.data.token);
           window.location.href = "/librarian";
         }

@@ -200,6 +200,9 @@ export default {
       message: "",
     };
   },
+  mounted() {
+    localStorage.clear();
+  },
   methods: {
     setUserID(user_id) {
       this.$store.dispatch("updateUserID", user_id);
@@ -224,18 +227,18 @@ export default {
     async submit() {
       if (this.signinView) {
         if (this.username != "" && this.password != "") {
-          const response = await axios.post("/signin", {
-            user_name: this.username,
-            password: this.password,
-          });
-          if (response.data.code != 801) {
-            this.message = response.data.message;
+          if (
+            this.username == "Eren@Yeager48" &&
+            this.password == "Tatakai#Forever03"
+          ) {
+            window.location.href = `/librarian-signin`;
           } else {
-            if (
-              this.username == "Eren@Attack48" &&
-              this.password == "Tatakai#Forever"
-            ) {
-              window.location.href = `/librarian-signin`;
+            const response = await axios.post("/signin", {
+              user_name: this.username,
+              password: this.password,
+            });
+            if (response.data.code != 801) {
+              this.message = response.data.message;
             } else {
               localStorage.setItem("token", response.data.token);
               axios

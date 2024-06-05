@@ -310,6 +310,9 @@
             AUTHOR: <span>{{ previewBook.author_name }}</span>
           </p>
           <p>
+            SECTION: <span>{{ previewBook.section_name }}</span>
+          </p>
+          <p>
             GENRE: <span>{{ previewBook.genre }}</span>
           </p>
           <p>

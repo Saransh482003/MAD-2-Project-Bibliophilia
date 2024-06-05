@@ -11,8 +11,10 @@
       <p class="logoText">Bibliophilia<span>LIBRARIAN</span></p>
     </router-link>
     <div class="navLinks">
-      <router-link to="/librarian" class="link">Dashboard</router-link>
-      <router-link to="/logout" class="link">Logout</router-link>
+      <router-link to="/librarian" class="link" @click="reload"
+        >Dashboard</router-link
+      >
+      <router-link to="/" class="link">Logout</router-link>
       <div class="profile">
         <img
           src="@/assets/images/librarian.png"
@@ -27,6 +29,11 @@
 <script>
 export default {
   name: "LibrarianNavbar",
+  methods: {
+    reload() {
+      window.location.reload();
+    },
+  },
 };
 </script>
 
