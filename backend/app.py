@@ -45,6 +45,10 @@ app.config["CELERY"] = {
     },
 
 }
+
+# To Run Celery
+# Run Celery Worker first: celery -A app.celery_app worker --loglevel INFO -P gevent
+# Then Celery Beat Scheduler: celery -A app.celery_app beat --loglevel INFO
 celery_app = celery_init_app(app)
 db.init_app(app)
 CORS(app)
