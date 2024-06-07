@@ -456,42 +456,44 @@
       <div class="headBookTitleContainer">
         <div class="headBookTitle">Issue Requests</div>
       </div>
-      <div class="logHead">
-        <div class="issueRow snoRow">Request Date</div>
-        <div class="issueRow titleRow">Book Title</div>
-        <div class="issueRow userNameRow">User Name</div>
-        <div class="issueRow actionRow">Actions</div>
-      </div>
-      <div
-        class="logHead whiteBg"
-        v-for="(request, index) in allRequests"
-        :key="index"
-      >
-        <div class="issueRow snoRow">{{ request.request_date }}</div>
-        <div class="issueRow titleRow">{{ request.book_name }}</div>
-        <div class="issueRow userNameRow">{{ request.user_name }}</div>
-        <div class="issueRow actionRow">
-          <div
-            class="issueAction"
-            @click="acceptIssue(request.book_id, request.user_id)"
-          >
-            <img
-              src="@/assets/images/tick-icon.png"
-              alt=""
-              class="actionBtnImg"
-            />
-            Issue
-          </div>
-          <div
-            class="issueAction"
-            @click="rejectIssue(request.book_id, request.user_id)"
-          >
-            <img
-              src="@/assets/images/cross-icon.png"
-              alt=""
-              class="actionBtnImg"
-            />
-            Reject
+      <div class="rower">
+        <div class="logHead">
+          <div class="issueRow snoRow">Request Date</div>
+          <div class="issueRow titleRow">Book Title</div>
+          <div class="issueRow userNameRow">User Name</div>
+          <div class="issueRow actionRow">Actions</div>
+        </div>
+        <div
+          class="logHead whiteBg"
+          v-for="(request, index) in allRequests"
+          :key="index"
+        >
+          <div class="issueRow snoRow">{{ request.request_date }}</div>
+          <div class="issueRow titleRow">{{ request.book_name }}</div>
+          <div class="issueRow userNameRow">{{ request.user_name }}</div>
+          <div class="issueRow actionRow">
+            <div
+              class="issueAction"
+              @click="acceptIssue(request.book_id, request.user_id)"
+            >
+              <img
+                src="@/assets/images/tick-icon.png"
+                alt=""
+                class="actionBtnImg"
+              />
+              Issue
+            </div>
+            <div
+              class="issueAction"
+              @click="rejectIssue(request.book_id, request.user_id)"
+            >
+              <img
+                src="@/assets/images/cross-icon.png"
+                alt=""
+                class="actionBtnImg"
+              />
+              Reject
+            </div>
           </div>
         </div>
       </div>
@@ -499,35 +501,44 @@
     <div class="mainPanel directionColumn" v-if="changeView == 4">
       <div class="headBookTitleContainer">
         <div class="headBookTitle">Issue Logs</div>
-      </div>
-      <div class="logHead">
-        <div class="issueRow snoRow">Issue Date</div>
-        <div class="issueRow titleRow">Book Title</div>
-        <div class="issueRow userNameRow">User Name</div>
-        <div class="issueRow actionRow">Return Date</div>
-      </div>
-      <div
-        class="logHead whiteBg"
-        v-for="(issue, index) in allIssues"
-        :key="index"
-      >
-        <div class="issueRow snoRow">{{ issue.doi }}</div>
-        <div class="issueRow titleRow">{{ issue.book_name }}</div>
-        <div class="issueRow userNameRow">{{ issue.user_name }}</div>
-        <div class="issueRow actionRow" v-if="issue.current_issue">
-          <div
-            class="issueAction"
-            @click="revokeIssue(issue.book_id, issue.user_id)"
-          >
-            <img
-              src="@/assets/images/return_icon.png"
-              alt=""
-              class="actionBtnImg"
-            />
-            Revoke Issue
-          </div>
+        <div
+          class="download_logs"
+          @click="download_logs()"
+          ref="download_loger"
+        >
+          Download All Logs
         </div>
-        <div class="issueRow actionRow" v-else>{{ issue.dor }}</div>
+      </div>
+      <div class="rower">
+        <div class="logHead">
+          <div class="issueRow snoRow">Issue Date</div>
+          <div class="issueRow titleRow">Book Title</div>
+          <div class="issueRow userNameRow">User Name</div>
+          <div class="issueRow actionRow">Return Date</div>
+        </div>
+        <div
+          class="logHead whiteBg"
+          v-for="(issue, index) in allIssues"
+          :key="index"
+        >
+          <div class="issueRow snoRow">{{ issue.doi }}</div>
+          <div class="issueRow titleRow">{{ issue.book_name }}</div>
+          <div class="issueRow userNameRow">{{ issue.user_name }}</div>
+          <div class="issueRow actionRow" v-if="issue.current_issue">
+            <div
+              class="issueAction"
+              @click="revokeIssue(issue.book_id, issue.user_id)"
+            >
+              <img
+                src="@/assets/images/return_icon.png"
+                alt=""
+                class="actionBtnImg"
+              />
+              Revoke Issue
+            </div>
+          </div>
+          <div class="issueRow actionRow" v-else>{{ issue.dor }}</div>
+        </div>
       </div>
     </div>
     <div class="mainPanel withPreview" v-if="changeView == 5">
@@ -1313,6 +1324,37 @@ export default {
         this.fetchUsers();
       }
     },
+    async download_logs() {
+      await axios
+        .get("/get-csv/issues")
+        .then((result) => {
+          axios
+            .get(`/task-result/${result.data.result_id}`)
+            .then((responserr) => {
+              axios
+                .get(`/download/${responserr.data.value}`, {
+                  responseType: "blob",
+                })
+                .then((response) => {
+                  const url = window.URL.createObjectURL(
+                    new Blob([response.data])
+                  );
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.setAttribute("download", "Issue_Logs.csv");
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                })
+                .catch((error) => {
+                  console.error("Error downloading file:", error);
+                });
+            });
+        })
+        .catch((error) => {
+          console.error("Error downloading file:", error);
+        });
+    },
     fetchLatest() {
       axios
         .get(`/get-content/latestBooks`)
@@ -1348,7 +1390,6 @@ export default {
           this.searchBooks.authors = response.data.authors;
           this.searchBooks.genres = response.data.genres;
           this.searchBooks.sections = response.data.sections;
-          console.log(this.searchBooks);
           if (this.searchBooks.titles.length != 0) {
             this.changePreviewBook(this.searchBooks.titles[0].book_id);
           } else if (this.searchBooks.authors.length != 0) {
@@ -1385,7 +1426,6 @@ export default {
         })
         .then((response) => {
           this.authorsStatsData = response.data;
-          console.log(this.bookStatsData);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -1400,7 +1440,6 @@ export default {
         })
         .then((response) => {
           this.bookStatsData = response.data;
-          console.log(this.bookStatsData);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -2164,7 +2203,6 @@ export default {
     },
     changePreviewSection(section_id) {
       this.addSectionPallet = false;
-      console.log(section_id);
       axios
         .get(`/get-librarian/previewSection?section_id=${section_id}`, {
           headers: {
@@ -2230,7 +2268,6 @@ export default {
             .catch(() => {
               this.banData["ban_type"] = "none";
             });
-          console.log(this.banData);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -2606,6 +2643,7 @@ export default {
   font-weight: 600;
   font-size: 1.1rem;
   letter-spacing: 0.5px;
+  margin-left: 1rem;
 }
 .addNewBook {
   display: flex;
@@ -3097,5 +3135,34 @@ export default {
   border: 0rem;
   background-color: #111914;
   border-bottom: 3px solid #e6ac45;
+}
+.rower {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  overflow-y: scroll;
+}
+.download_logs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 20%;
+  height: 2.5rem;
+  margin: 0rem 2rem;
+  margin-right: 3.5rem;
+  font-weight: 600;
+  background-color: white;
+  color: #e6ac45;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 1rem #00000026;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.2s ease;
+}
+.download_logs:hover {
+  background-color: #25352b;
+  color: #e6ac45;
 }
 </style>

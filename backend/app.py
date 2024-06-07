@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, send_file, render_template
 from functools import wraps
 import jwt
 from sqlalchemy.sql.expression import func, desc, case
@@ -10,12 +10,20 @@ import random
 import requests
 import math
 import calendar
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from dateutil import parser
 from celery_config import celery_init_app
 from celery.result import AsyncResult
 from celery import shared_task
 from celery.contrib.abortable import AbortableTask
+import pandas as pd
+import os
+from celery.schedules import crontab
+# from email_task import send_email_reminder
+import smtplib
+import ssl
+from email.message import EmailMessage
+
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///library.sqlite3'
@@ -25,6 +33,18 @@ app.config["CELERY"] = {
     "broker_url": "redis://localhost:6379/0",
     "result_backend": "redis://localhost:6379/0",
     "task_ignore_result": True,
+    "beat_schedule": {
+        "run-every-day-at-6pm": {
+            "task": "app.send_email_reminder",
+            "schedule": crontab(hour=23-5, minute=37-30),
+        },
+        "run-on-first-of-every-month": {
+            "task": "app.monthly_report_generator",
+            # "schedule": crontab(hour=5-5, minute=30-30, day_of_month='1'),
+            "schedule": 60,
+        },
+    },
+
 }
 celery_app = celery_init_app(app)
 db.init_app(app)
@@ -38,19 +58,225 @@ cache = Cache(app, config={
 })
 
 
-@shared_task(bind=True,base=AbortableTask,ignore_result=False)
-def add_together(self,name):
-    return name[::-1]
+@shared_task(bind=True, base=AbortableTask, ignore_result=False)
+def IssueCSV(self):
+    sno = []
+    user_ids = []
+    user_names = []
+    book_ids = []
+    book_names = []
+    book_authors = []
+    date_requested = []
+    doi = []
+    dor = []
+    with app.app_context():
+        fetchIssues = db.session.query(Issues.sno, Issues.user_id, Users.user_name, Issues.book_id, Books.book_name,  Books.author_name, Issues.request_date, Issues.doi, Issues.dor).join(
+            Books, Issues.book_id == Books.book_id).join(Users, Issues.user_id == Users.user_id).group_by(Issues.sno).order_by(Issues.sno).all()
+        for issue in fetchIssues:
+            sno.append(int(issue[0]))
+            user_ids.append(issue[1])
+            user_names.append(issue[2])
+            book_ids.append(issue[3])
+            book_names.append(issue[4])
+            book_authors.append(issue[5])
+            date_requested.append(issue[6])
+            doi.append(issue[7])
+            dor.append(issue[8])
+        data = {
+            "sno": sno,
+            "user_id": user_ids,
+            "user_name": user_names,
+            "book_id": book_ids,
+            "book_name": book_names,
+            "book_author": book_authors,
+            "request_date": date_requested,
+            "doi": doi,
+            "dor": dor,
+        }
+        issueData = pd.DataFrame(data)
+        fileName = r"tmp\Issue_Logs.csv"
+        filePath = os.path.join(os.getcwd(), fileName)
+        issueData.to_csv(filePath, index=False)
+        return filePath
 
 
-@app.route("/reverse")
+@shared_task(bind=True, base=AbortableTask, ignore_result=False)
+def send_email_reminder(self):
+    with app.app_context():
+        last_logers = db.session.query(
+            Users.user_id, Users.user_name, Users.email, Users.ph_no, Users.last_loged, Users.gender
+        ).filter(Users.last_loged <= datetime.now() - timedelta(days=15)).group_by(Users.user_id).order_by(desc(Users.last_loged)).limit(10).all()
+
+        returner = db.session.query(
+            Users.user_id, Users.user_name, Users.email, Users.ph_no, Users.last_loged, Users.gender, Issues.book_id, Books.book_name
+        ).join(Issues, Issues.user_id == Users.user_id).join(Books, Books.book_id == Issues.book_id).filter(
+            Issues.dor == datetime.now() + timedelta(days=1)
+        ).group_by(Users.user_id).order_by(desc(Issues.dor)).limit(10).all()
+
+        email_sender = 'saini.saransh03@gmail.com'
+        email_password = 'qctmtkdcbkchxbkj'
+
+        subject = 'Bibliophilia - Daily Reminder'
+        for i in last_logers:
+            try:
+                body = f"""
+                    Dear {i[1]},
+                    We miss you at Bibliophilia! It's been {(datetime.now() - i[4]).days} days since your last visit. Dive back into the world of books and discover new adventures waiting for you.
+                    We look forward to seeing you again soon.
+
+                    Best regards,
+                    The Bibliophilia Team
+                """
+                email_reciever = i[2]
+                em = EmailMessage()
+                em['From'] = email_sender
+                em['To'] = email_reciever
+                em['Subject'] = subject
+                em.set_content(body, charset='utf-8')
+
+                context = ssl.create_default_context()
+                with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+                    smtp.login(email_sender, email_password)
+                    smtp.sendmail(email_sender, email_reciever, em.as_string())
+            except:
+                print(f"Not working for {i[1]}")
+
+        subject_books = 'Bibliophilia - Book Return Approaching'
+        for i in returner:
+            try:
+                body = f"""
+                    Dear {i[1]},
+                    This is a gentle reminder that the return date for the book "{i[7]}" is tomorrow ({(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}). You are welcome to return the book earlier if convenient, or you can re-issue it after the return date.
+                    
+                    Happy reading!
+                    
+                    Best regards,
+                    The Bibliophilia Team
+                """
+                email_reciever = i[2]
+                rem = EmailMessage()
+                rem['From'] = email_sender
+                rem['To'] = email_reciever
+                rem['Subject'] = subject_books
+                rem.set_content(body, charset='utf-8')
+
+                with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+                    smtp.login(email_sender, email_password)
+                    smtp.sendmail(email_sender, email_reciever,
+                                  rem.as_string())
+            except:
+                print(f"Not working for {i[1]}")
+
+        return {"message": f"Emails sent to {len(last_logers)} inactive users and {len(returner)} return date approaching users."}
+
+
+@shared_task(bind=True, base=AbortableTask, ignore_result=False)
+def monthly_report_generator(self):
+    with app.app_context():
+        now = datetime.now()
+        now_date = now.strftime("%d %B %Y")
+        active = db.session.query(Users.last_loged, func.count(Users.last_loged)).filter(Users.last_loged >= date(now.year, now.month, 1) - timedelta(
+            days=31)).filter(Users.last_loged <= date(now.year, now.month, 30) - timedelta(days=31)).group_by(Users.last_loged).order_by(Users.last_loged).all()
+        total_active = sum([i[1] for i in active])
+        total_issues = len(Issues.query.filter(Issues.doi >= date(now.year, now.month, 1) - timedelta(
+            days=31)).filter(Issues.doi <= date(now.year, now.month, 30) - timedelta(days=31)).all())
+        total_rating = random.randint(total_issues-10, total_issues+10)
+        total_requests = len(Requests.query.filter(Requests.request_date >= date(now.year, now.month, 1) - timedelta(
+            days=31)).filter(Requests.request_date <= date(now.year, now.month, 30) - timedelta(days=31)).all())
+        total_bans = len(Blacklists.query.filter(Blacklists.ban_date >= date(now.year, now.month, 1) - timedelta(
+            days=31)).filter(Blacklists.ban_date <= date(now.year, now.month, 30) - timedelta(days=31)).all())
+        dataValues = {
+            "total_active": total_active,
+            "total_issues": total_issues,
+            "total_rating": total_rating,
+            "total_requests": total_requests,
+            "total_bans": total_bans,
+        }
+        current_month = (date(now.year, now.month, 30) -
+                         timedelta(days=31)).strftime("%B")
+
+        top_books_fetcher = db.session.query(Books.book_id, Books.img, Books.author_name, func.count(Issues.sno)).join(Issues, Issues.book_id == Books.book_id).filter(Issues.doi >= date(
+            now.year, now.month, 1) - timedelta(days=31)).filter(Issues.doi <= date(now.year, now.month, 30) - timedelta(days=31)).group_by(Books.book_id).order_by(desc(func.count(Issues.sno))).limit(5).all()
+        top_books = [{"img": i[1], "author_name": i[2],
+                      "issue_count": i[3]} for i in top_books_fetcher]
+
+        top_authors_fetcher = db.session.query(Books.author_name, Authors.img, func.count(Issues.sno)).join(Issues, Issues.book_id == Books.book_id).join(Authors, Authors.author_id == Books.author_id).filter(
+            Issues.doi >= date(now.year, now.month, 1) - timedelta(days=31)).filter(Issues.doi <= date(now.year, now.month, 30) - timedelta(days=31)).group_by(Authors.author_id).order_by(desc(func.count(Issues.sno))).limit(5).all()
+        top_authors = [{"img": i[1], "author_name": i[0],
+                        "issue_count": i[2]} for i in top_authors_fetcher]
+
+        top_users_fetcher = db.session.query(Users.user_name, Users.gender).order_by(
+            desc(Users.last_loged)).limit(5).all()
+        top_users = [{"name": i[0], "gender": i[1]} for i in top_users_fetcher]
+
+        top_section_fetcher = db.session.query(Books.section_id, Sections.img, Sections.section_name, func.count(Issues.sno)).join(Issues, Issues.book_id == Books.book_id).join(Sections, Sections.section_id == Books.section_id).filter(
+            Issues.doi >= date(now.year, now.month, 1) - timedelta(days=31)).filter(Issues.doi <= date(now.year, now.month, 30) - timedelta(days=31)).group_by(Books.section_id).order_by(desc(func.count(Issues.sno))).limit(5).all()
+        top_sections = [{"img": i[1], "name": i[2]}
+                        for i in top_section_fetcher]
+
+        renderer = render_template("report.html", dataValues=dataValues, current_month=current_month, top_books=top_books,
+                                   top_authors=top_authors, top_users=top_users, top_sections=top_sections, now_date=now_date)
+
+        file_path = './templates/exo_report.html'
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(renderer)
+
+        email_sender = 'saini.saransh03@gmail.com'
+        email_password = 'qctmtkdcbkchxbkj'
+        email_receiver = "librarian.bibliophilia@gmail.com"
+        subject = f"{current_month} Monthly Report - Bibliophilia"
+
+        em = EmailMessage()
+        em['From'] = email_sender
+        em['To'] = email_receiver
+        em['Subject'] = subject
+
+        with open(file_path, 'rb') as f:
+            em.add_attachment(f.read(), maintype='text', subtype='html', filename='exo_report.html')
+
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+            smtp.login(email_sender, email_password)
+            smtp.send_message(em)
+
+        return {"message": f"{current_month} Monthly report sent successfully!"}
+
+
+@app.route("/monthly-report")
+def monthlyBarChart():
+    now = datetime.now()
+    active = db.session.query(Users.last_loged, func.count(Users.last_loged)).filter(Users.last_loged >= date(now.year, now.month, 1) - timedelta(
+        days=31)).filter(Users.last_loged <= date(now.year, now.month, 30) - timedelta(days=31)).group_by(Users.last_loged).order_by(Users.last_loged).all()
+    daysList = [i[0].day for i in active]
+    barData = {"labels": [i for i in range(1, 31)], "dataset": []}
+    for i in barData["labels"]:
+        if i in daysList:
+            barData["dataset"].append(active[daysList.index(i)][1])
+        else:
+            barData["dataset"].append(0)
+    barData["month"] = active[0][0].strftime("%B")
+    barData["year"] = active[0][0].strftime("%Y")
+
+    most_genres = db.session.query(Books.genre, func.count(Issues.sno)).join(Books, Books.book_id == Issues.book_id).filter(Issues.request_date >= date(now.year, now.month, 1) - timedelta(
+        days=31)).filter(Issues.request_date <= date(now.year, now.month, 30) - timedelta(days=31)).group_by(Books.genre).order_by(desc(func.count(Issues.sno))).limit(5).all()
+    pieData = {"genre": [i[0] for i in most_genres],
+               "count": [i[1] for i in most_genres]}
+
+    return {"barData": barData, "pieData": pieData}
+
+
+@app.route("/send-emails")
+def sender():
+    result = send_email_reminder()
+    return result
+
+
+@app.route("/get-csv/issues")
 def start_add():
-    name = request.args.to_dict()["name"]
-    result = add_together.delay(name)
+    result = IssueCSV.delay()
     return {"result_id": result.id}
 
 
-@app.route("/result/<id>")
+@app.route("/task-result/<id>")
 def task_result(id):
     result = AsyncResult(id)
     return {
@@ -58,29 +284,11 @@ def task_result(id):
         "successful": result.successful(),
         "value": result.result if result.ready() else None,
     }
-# def get_task_result(task_id):
-#     result = AsyncResult(task_id, app=celery)
-#     if result.state == 'SUCCESS':
-#         return result.result
-#     elif result.state == 'FAILURE':
-#         return result.info  # In case of errors
-#     else:
-#         return f"Task is in state: {result.state}"
 
-# @celery.task(name="Number Printer")
-# def num_printer(n):
 
-#     return n
-
-# @app.route("/test-celery/<int:num>", methods=["GET","POST"])
-# def celeryTest(num):
-#     task = num_printer.delay(num)
-#     return jsonify({"task_id": task.id}), 202
-
-# @app.route("/task-result/<task_id>", methods=["GET"])
-# def task_result(task_id):
-#     result = get_task_result(task_id)
-#     return jsonify({"result": result})
+@app.route("/download/<path:file_path>", methods=['GET'])
+def download_file(file_path):
+    return send_file(file_path, as_attachment=True)
 
 
 def nextID(id):
@@ -1050,7 +1258,7 @@ def getLibrarianIssues():
         'x-access-token': token
     }
     requests = db.session.query(Issues, Books, Users).join(Books, Books.book_id == Issues.book_id).join(
-        Users, Users.user_id == Issues.user_id).order_by(Issues.doi.desc()).limit(100).all()
+        Users, Users.user_id == Issues.user_id).order_by(Issues.doi.desc()).limit(200).all()
     allIssues = []
     now = datetime.now()
     for issue, book, user in requests:

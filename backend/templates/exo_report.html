@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>May Monthly Report</title>
+    <link rel="stylesheet" href="report.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <style>
+        * {
+            padding: 0rem;
+            margin: 0rem;
+            box-sizing: border-box;
+            font-family: "Poppins";
+        }
+
+        .root {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+            overflow-y: scroll;
+            position: relative;
+        }
+
+        .root::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("https://github.com/Saransh482003/Image-hosting/blob/main/report-backgroud.jpg?raw=true");
+            background-position: center center;
+            background-size: cover;
+            background-repeat: no-repeat;
+            opacity: 0.3;
+            z-index: -1;
+        }
+
+        .top-margin {
+            display: flex;
+            align-items: center;
+            height: 5rem;
+            width: 100%;
+            padding: 0.5rem;
+        }
+
+        .logo {
+            height: 100%;
+            width: auto;
+        }
+
+        .mainContent {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0rem 2rem;
+        }
+
+        .report_head {
+            width: 100%;
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 1rem 0rem;
+            letter-spacing: 1px;
+            padding-bottom: 1rem;
+            margin-left: 7rem;
+            /* border-bottom: 1px solid black; */
+        }
+        .report_head span {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: rgb(83, 83, 83);
+            letter-spacing: normal;
+
+        }
+
+        .charts {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: max-content;
+            margin: 1rem 0rem;
+        }
+
+        .barChart {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 25rem;
+            width: 55%;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.25rem 1rem #00000026;
+            background-color: white;
+            margin: 0rem 1rem;
+            padding: 1rem 0rem;
+        }
+
+        #barChartCanva {
+            height: 90%;
+            width: 90%;
+        }
+
+        .pieChart {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 25rem;
+            width: 35%;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.25rem 1rem #00000026;
+            background-color: white;
+            margin: 0rem 1rem;
+            padding: 0.5rem 0rem;
+        }
+
+        #pieChartCanva {
+            height: 90%;
+            width: 90%;
+        }
+
+        .dataValues {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 10rem;
+            margin-bottom: 1rem;
+        }
+
+        .dataCard {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 15rem;
+            height: 8rem;
+            margin: 1rem;
+            border-radius: 0.5rem;
+            background-color: white;
+        }
+
+        .dataHead {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 1rem;
+            font-size: 0.8rem;
+            margin: 0.5rem;
+            color: rgb(81, 81, 81);
+            font-weight: 600;
+        }
+
+        .dataVariable {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 6rem;
+            font-weight: 600;
+            font-size: 4rem;
+            padding: 0.5rem;
+            background: linear-gradient(200deg,
+                    rgba(248, 178, 82, 1),
+                    rgba(228, 100, 30, 1));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            /* color: rgb(228, 100, 30); */
+        }
+
+        .topBooks {
+            display: flex;
+            flex-direction: column;
+            height: max-content;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .topBookContainer {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            height: max-content;
+        }
+
+        .bookCard {
+            display: flex;
+            flex-direction: column;
+            /* justify-content: center; */
+            align-items: center;
+            height: 20rem;
+            width: 15rem;
+            margin: 1rem;
+            border-radius: 0.25rem;
+            background-color: white;
+            box-shadow: 0 0.25rem 1rem #00000026;
+        }
+
+        .bookCardImgCont {
+            display: flex;
+            height: 19rem;
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .bookCardImg {
+            width: auto;
+            height: 100%;
+        }
+
+        .bookCardDetails {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 100%;
+            height: 3rem;
+            padding: 0.5rem 1rem;
+        }
+
+        .bookDetail {
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .bookDetail span {
+            font-weight: 500;
+        }
+
+        .topBooksHead {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-left: 4rem;
+            margin-top: 1rem;
+        }
+
+        .authorImg {
+            border-radius: 30rem;
+            height: 13rem;
+            width: 13rem;
+            margin: 0.5rem;
+            object-fit: cover;
+            box-shadow:  0 0.25rem 1rem #00000026;
+        }
+
+        .authorCard {
+            height: 17rem;
+        }
+
+        .authorDetails {
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .userImg{
+            height: 80%;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="root">
+        <div class="top-margin">
+            <img src="https://github.com/Saransh482003/Image-hosting/blob/main/logo.png?raw=true" alt="Logo" class="logo">
+        </div>
+        <div class="mainContent">
+            <div class="report_head">May Monthly Report <span>[ Issued on 07 June 2024 ]</span></div>
+            <div class="charts">
+                <div class="barChart">
+                    <canvas id="barChartCanva"></canvas>
+                </div>
+                <div class="pieChart">
+                    <canvas id="pieChartCanva"></canvas>
+                </div>
+            </div>
+            <div class="dataValues">
+                <div class="dataCard">
+                    <p class="dataHead"># of Active Users</p>
+                    <p class="dataVariable">340</p>
+                </div>
+                <div class="dataCard">
+                    <p class="dataHead"># of Issues</p>
+                    <p class="dataVariable">262</p>
+                </div>
+                <div class="dataCard">
+                    <p class="dataHead"># of Ratings</p>
+                    <p class="dataVariable">252</p>
+                </div>
+                <div class="dataCard">
+                    <p class="dataHead"># of Requests</p>
+                    <p class="dataVariable">149</p>
+                </div>
+                <div class="dataCard">
+                    <p class="dataHead"># of Banned Users</p>
+                    <p class="dataVariable">8</p>
+                </div>
+            </div>
+            <div class="topBooks">
+                <p class="topBooksHead">Top 5 Books Issued</p>
+                <div class="topBookContainer">
+                    
+                    <div class="bookCard">
+                        <div class="bookCardImgCont">
+                            <img src="http://images.amazon.com/images/P/1852422289.01.LZZZZZZZ.jpg" alt=""
+                                class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail">Author: <span>Atima Srivastava</span></p>
+                            <p class="bookDetail">Issues: <span>1</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard">
+                        <div class="bookCardImgCont">
+                            <img src="http://images.amazon.com/images/P/0486298876.01.LZZZZZZZ.jpg" alt=""
+                                class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail">Author: <span>Charles Singer</span></p>
+                            <p class="bookDetail">Issues: <span>1</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard">
+                        <div class="bookCardImgCont">
+                            <img src="http://images.amazon.com/images/P/0915035103.01.LZZZZZZZ.jpg" alt=""
+                                class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail">Author: <span>Cheri Smith</span></p>
+                            <p class="bookDetail">Issues: <span>1</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard">
+                        <div class="bookCardImgCont">
+                            <img src="http://images.amazon.com/images/P/0821729012.01.LZZZZZZZ.jpg" alt=""
+                                class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail">Author: <span>Patricia Wallace</span></p>
+                            <p class="bookDetail">Issues: <span>1</span></p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard">
+                        <div class="bookCardImgCont">
+                            <img src="http://images.amazon.com/images/P/0749933836.01.LZZZZZZZ.jpg" alt=""
+                                class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail">Author: <span>Anne Douglas</span></p>
+                            <p class="bookDetail">Issues: <span>1</span></p>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            <div class="topBooks">
+                <p class="topBooksHead">Top 5 Author Issued</p>
+                <div class="topBookContainer">
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://t4.ftcdn.net/jpg/03/68/83/79/240_F_368837943_nDZVsOXICji6OSnsmLsjpgf3JgxuzJed.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Charles Dickens</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://t3.ftcdn.net/jpg/07/64/54/86/240_F_764548668_c6OcFuFyJjuesxpDqrww0TmA3NPBAJ2x.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Charles Singer</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://t3.ftcdn.net/jpg/07/76/06/98/240_F_776069805_0F92GVzaLgQzSIiSQXKROV9AyC8bo3V3.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Cheri Smith</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://t4.ftcdn.net/jpg/01/90/40/53/240_F_190405308_m2hggCb8kJt0jiwZJ6aDQWPFay4XY3eB.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Anne Douglas</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://t4.ftcdn.net/jpg/07/78/85/23/240_F_778852303_sxHI0xMzZLPAWbjue2Arf2uo8Kw9LO21.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Albrecht Durer</p>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            <div class="topBooks">
+                <p class="topBooksHead">Top 5 Most Active Users</p>
+                <div class="topBookContainer">
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://github.com/Saransh482003/Image-hosting/blob/main/Female%20profile.png?raw=true"
+                                alt="" class="bookCardImg userImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Evelyn Lopez</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://github.com/Saransh482003/Image-hosting/blob/main/Female%20profile.png?raw=true"
+                                alt="" class="bookCardImg userImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Isabella Dubois</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://github.com/Saransh482003/Image-hosting/blob/main/Female%20profile.png?raw=true"
+                                alt="" class="bookCardImg userImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Emma Patel</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://github.com/Saransh482003/Image-hosting/blob/main/Female%20profile.png?raw=true"
+                                alt="" class="bookCardImg userImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Mia Smith</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://github.com/Saransh482003/Image-hosting/blob/main/Male%20profile.png?raw=true"
+                                alt="" class="bookCardImg userImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Henry Santos</p>
+                        </div>
+                    </div>
+                    
+                    
+                </div>
+            </div>
+            <div class="topBooks">
+                <p class="topBooksHead">Top 5 Issued Sections</p>
+                <div class="topBookContainer">
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://img.freepik.com/premium-photo/ai-generated-illustration-sci-fi-futuristic-technology-metropolis-skyline-planets-space_665346-29712.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Fiction</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://static.hbo.com/content/dam/hbodata/series/chernobyl/key-art/chernobyl-ka-1920.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Non-Fiction</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://lobopopart.com.br/wp-content/uploads/2020/07/Pintura-Barroco.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">History</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://static.vecteezy.com/system/resources/previews/010/067/933/non_2x/self-improvement-personal-development-or-growth-mindset-motivation-to-grow-and-achieve-career-success-learning-new-skill-or-knowledge-concept-businessman-watering-plant-growing-from-his-self-head-vector.jpg"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Self-Help and Personal Development</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bookCard authorCard">
+                        <div class="bookCardImgCont authorImg">
+                            <img src="https://images.news18.com/ibnlive/uploads/2024/04/artificial-intelligence-2024-04-36146de1a4c86d5f84fa6b38565dde71.png"
+                                alt="" class="bookCardImg">
+                        </div>
+                        <div class="bookCardDetails">
+                            <p class="bookDetail authorDetails">Science and Technology</p>
+                        </div>
+                    </div>
+                    
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const ctx = document.getElementById("barChartCanva").getContext("2d");
+
+            fetch("http://127.0.0.1:5000/monthly-report")
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log(data);
+                    new Chart(ctx, {
+                        type: "bar",
+                        data: {
+                            labels: data.barData.labels,
+                            datasets: [
+                                {
+                                    label: "Active Users",
+                                    data: data.barData.dataset,
+                                    backgroundColor: "rgba(243, 139, 47, 0.2)",
+                                    borderColor: "rgba(243, 139, 47, 1)",
+                                    borderWidth: 1,
+                                    borderRadius: 1,
+                                },
+                            ],
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: "# Active Users",
+                                        font: {
+                                            family: "Poppins",
+                                            size: 13,
+                                            weight: "bold",
+                                        },
+                                    },
+
+                                    ticks: {
+                                        font: {
+                                            family: "Poppins",
+                                            size: 10,
+                                            weight: "bold",
+                                            color: "black",
+                                        },
+                                    },
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: "Days of the Month",
+                                        font: {
+                                            family: "Poppins",
+                                            size: 13,
+                                            weight: "bold",
+                                        },
+                                    },
+                                    grid: {
+                                        display: false,
+                                    },
+                                    ticks: {
+                                        font: {
+                                            family: "Poppins",
+                                            size: 10,
+                                            weight: "bold",
+                                        },
+                                    },
+                                },
+                            },
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: `Number of Active Users in ${data.barData.month} ${data.barData.year}`,
+                                    font: {
+                                        family: "Poppins",
+                                        size: 15,
+                                        weight: "bold",
+                                    },
+                                    padding: {
+                                        top: 0,
+                                        bottom: 30, // Add bottom padding of 20px
+                                        left: 0,
+                                        right: 0,
+                                    },
+                                },
+                                legend: {
+                                    display: false,
+                                },
+                                datalabels: {
+                                    font: {
+                                        size: 8,
+                                        weight: "bold",
+                                        family: "Poppins",
+                                        color: "black",
+                                    },
+                                },
+                            },
+                        },
+                        plugins: [ChartDataLabels],
+                    });
+                })
+                .catch((error) => console.error("Error fetching data:", error));
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const ctx = document.getElementById("pieChartCanva").getContext("2d");
+
+            fetch("http://127.0.0.1:5000/monthly-report")
+                .then((response) => response.json())
+                .then((data) => {
+                    console.log(data);
+                    new Chart(ctx, {
+                        type: "pie",
+                        data: {
+                            labels: data.pieData.genres,
+                            datasets: [
+                                {
+                                    data: data.pieData.count,
+                                    backgroundColor: [
+                                        "rgba(248, 178, 82, 0.2)",
+                                        "rgba(243, 139, 47, 0.2)",
+                                        "rgba(228, 100, 30, 0.2)",
+                                        "rgba(198, 74, 34, 0.2)",
+                                        "rgba(158, 58, 38, 0.2)",
+                                    ],
+                                    borderColor: [
+                                        "rgba(248, 178, 82, 1)",
+                                        "rgba(243, 139, 47, 1)",
+                                        "rgba(228, 100, 30, 1)",
+                                        "rgba(198, 74, 34, 1)",
+                                        "rgba(158, 58, 38, 1)",
+                                    ],
+                                    borderWidth: 1,
+                                },
+                            ],
+                        },
+                        options: {
+                            aspectRatio: 1,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: "Distribution of Active Users",
+                                    font: {
+                                        family: "Poppins",
+                                        size: 15,
+                                        weight: "bold",
+                                    },
+                                    padding: {
+                                        top: 0,
+                                        bottom: 30, // Add bottom padding of 20px
+                                        left: 0,
+                                        right: 0,
+                                    },
+                                },
+                                legend: {
+                                    display: true,
+                                    position: "bottom",
+                                },
+                                datalabels: {
+                                    anchor: "end",
+                                    align: "end",
+                                    color: "#4a4a4a",
+                                    borderWidth: 1,
+                                    font: {
+                                        family: "Poppins",
+                                        size: 10,
+                                        weight: "bold",
+                                    },
+                                    formatter: (value, ctx) => {
+                                        let genre = data.pieData.genre[ctx.dataIndex];
+                                        return genre + "\n:" + value;
+                                    },
+                                },
+                            },
+                            layout: {
+                                padding: {
+                                    left: 20,
+                                    right: 20,
+                                    top: 10,
+                                    bottom: 20,
+                                },
+                            },
+                        },
+                        plugins: [ChartDataLabels],
+                    });
+                })
+                .catch((error) => console.error("Error fetching data:", error));
+        });
+
+    </script>
+</body>
+
+</html>
