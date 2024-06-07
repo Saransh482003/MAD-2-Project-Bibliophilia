@@ -36,12 +36,11 @@ app.config["CELERY"] = {
     "beat_schedule": {
         "run-every-day-at-6pm": {
             "task": "app.send_email_reminder",
-            "schedule": crontab(hour=23-5, minute=37-30),
+            "schedule": crontab(hour=11, minute=30), # Time in UTC adjusted according to GMT(+5.5)
         },
         "run-on-first-of-every-month": {
             "task": "app.monthly_report_generator",
-            # "schedule": crontab(hour=5-5, minute=30-30, day_of_month='1'),
-            "schedule": 60,
+            "schedule": crontab(hour=23, minute=30, day_of_month='1'), ## Time in UTC adjusted according to GMT(+5.5)
         },
     },
 
