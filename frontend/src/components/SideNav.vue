@@ -156,6 +156,14 @@
         <p class="navBtnsText">User Management</p>
       </div>
     </div>
+    <div class="sideNavInner" v-else-if="page == 'read-book'">
+      <div class="navBtns" @click="goBack()" id="nav2">
+        <div class="navBtnImgContainer">
+          <img src="@/assets/images/back.png" alt="" class="navBtnImg" />
+        </div>
+        <p class="navBtnsText">Go Back</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -202,6 +210,9 @@ export default {
 
       let nav = document.getElementById(`nav${view}`);
       nav.classList.add("selected");
+    },
+    goBack() {
+      window.location.href = "/my-books";
     },
   },
 };

@@ -258,7 +258,7 @@
       </div>
     </div>
     <div class="mainPanel" v-if="changeMyBookView == 4">
-      <div class="feedbackChamber" v-if="feedbackBooks.length > 0">
+      <div class="feedbackChamber" v-if="feedbackBooks['Not Rated'].length > 0">
         <p class="myBooksHead feedbackHead">NOT RATED BOOKS</p>
         <NotFeedbackCards
           v-for="(feedback, index) in feedbackBooks['Not Rated']"
@@ -270,7 +270,7 @@
       <div
         class="feedbackChamber"
         style="margin-top: 2rem"
-        v-if="feedbackBooks.length > 0"
+        v-if="feedbackBooks['Rated'].length > 0"
       >
         <p class="myBooksHead feedbackHead">RATED BOOKS</p>
         <FeedbackCards
@@ -420,7 +420,8 @@ export default {
       }
     },
     readBook(book_id) {
-      console.log(`Reading ${book_id}`);
+      localStorage.setItem("current-read-bookid", book_id);
+      this.$router.push("/read-books");
     },
     async returnBook(book_id) {
       try {

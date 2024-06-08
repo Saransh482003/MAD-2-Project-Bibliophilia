@@ -1,11 +1,11 @@
 import requests
 
-url = 'http://127.0.0.1:5000/delete-content/users'
+url = 'http://127.0.0.1:5000/get-feedbacks'
 headers = {
-    'x-access-token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJSRVBBMDAwNiIsImlhdCI6MTcxNzQ5NTE2NiwiZXhwIjoxNzE3NTgxNTY2fQ.8_BM0XkgK808K5sUlIwtDyDBFGSCXZlz7IUKiqn-LE8'
+    'x-access-token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJSRVBBMDM1NCIsImlhdCI6MTcxNzc2NzI4NywiZXhwIjoxNzE3Nzg4ODg3fQ.FpoARHw0fYKmwGcSLJBZRYZPvP4VFHRh3H-XbnIE7DY'
 }
 params = {
-    'user_id': 'REPA0586',
+    'user_id': 'REPA0354',
 }
 
 response = requests.get(url, headers=headers, params=params)

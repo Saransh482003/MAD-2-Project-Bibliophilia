@@ -7,6 +7,7 @@ import MyBooksView from "../views/MyBooksView.vue";
 import LibrarianView from "../views/LibrarianView.vue";
 import UserSignin from "../views/UserSignin.vue";
 import LibrarianSignin from "../views/LibrarianSignin.vue";
+import ReadBooks from "../views/ReadBooks.vue";
 
 Vue.use(VueRouter);
 
@@ -65,6 +66,14 @@ const routes = [
     component: LibrarianSignin,
     meta: {
       title: "Bibliophilia - Librarian Signin",
+    },
+  },
+  {
+    path: "/read-books",
+    name: "read-books",
+    component: ReadBooks,
+    meta: {
+      title: "Bibliophilia - Read Books",
     },
   },
 ];

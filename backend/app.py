@@ -1,17 +1,15 @@
 from flask import Flask, jsonify, request, abort, send_file, render_template
 from functools import wraps
 import jwt
-from sqlalchemy.sql.expression import func, desc, case
+from sqlalchemy.sql.expression import func, desc, case, exists
 from flask_cors import CORS
 from flask_caching import Cache
-import redis
 from models import *
 import random
 import requests
 import math
 import calendar
 from datetime import datetime, timedelta
-from dateutil import parser
 from celery_config import celery_init_app
 from celery.result import AsyncResult
 from celery import shared_task
@@ -19,7 +17,6 @@ from celery.contrib.abortable import AbortableTask
 import pandas as pd
 import os
 from celery.schedules import crontab
-# from email_task import send_email_reminder
 import smtplib
 import ssl
 from email.message import EmailMessage
@@ -36,11 +33,13 @@ app.config["CELERY"] = {
     "beat_schedule": {
         "run-every-day-at-6pm": {
             "task": "app.send_email_reminder",
-            "schedule": crontab(hour=11, minute=30), # Time in UTC adjusted according to GMT(+5.5)
+            # Time in UTC adjusted according to GMT(+5.5)
+            "schedule": crontab(hour=11, minute=30),
         },
         "run-on-first-of-every-month": {
             "task": "app.monthly_report_generator",
-            "schedule": crontab(hour=23, minute=30, day_of_month='1'), ## Time in UTC adjusted according to GMT(+5.5)
+            # Time in UTC adjusted according to GMT(+5.5)
+            "schedule": crontab(hour=23, minute=30, day_of_month='1'),
         },
     },
 
@@ -208,8 +207,8 @@ def monthly_report_generator(self):
         top_authors = [{"img": i[1], "author_name": i[0],
                         "issue_count": i[2]} for i in top_authors_fetcher]
 
-        top_users_fetcher = db.session.query(Users.user_name, Users.gender).order_by(
-            desc(Users.last_loged)).limit(5).all()
+        top_users_fetcher = db.session.query(Users.user_name, Users.gender, func.count(Issues.sno), func.count(Ratings.sno)).join(Issues, Issues.user_id == Users.user_id).join(
+            Ratings, Ratings.user_id == Users.user_id).filter(Users.user_id == Issues.user_id).filter(Users.user_id == Ratings.user_id)
         top_users = [{"name": i[0], "gender": i[1]} for i in top_users_fetcher]
 
         top_section_fetcher = db.session.query(Books.section_id, Sections.img, Sections.section_name, func.count(Issues.sno)).join(Issues, Issues.book_id == Books.book_id).join(Sections, Sections.section_id == Books.section_id).filter(
@@ -235,7 +234,8 @@ def monthly_report_generator(self):
         em['Subject'] = subject
 
         with open(file_path, 'rb') as f:
-            em.add_attachment(f.read(), maintype='text', subtype='html', filename='exo_report.html')
+            em.add_attachment(f.read(), maintype='text',
+                              subtype='html', filename='exo_report.html')
 
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
             smtp.login(email_sender, email_password)
@@ -436,7 +436,6 @@ def signup():
 
 @app.route("/get-content/books", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -472,7 +471,7 @@ def getBooks():
 
 @app.route("/get-content/latestBooks", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
+@cache.cached(timeout=15)
 def getLatestBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -501,7 +500,6 @@ def getLatestBooks():
 
 @app.route("/get-content/authors", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getAuthors():
     token = request.headers.get('x-access-token')
     headers = {
@@ -535,8 +533,7 @@ def getAuthors():
 
 
 @app.route("/get-content/users", methods=["GET"])
-@token_required
-@cache.cached(timeout=120)
+# @token_required
 def getUsers():
     token = request.headers.get('x-access-token')
     headers = {
@@ -573,7 +570,6 @@ def getUsers():
 
 @app.route("/get-content/librarian/users", methods=["GET"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def getLibrarianUsers():
     token = request.headers.get('x-access-token')
     headers = {
@@ -610,7 +606,6 @@ def getLibrarianUsers():
 
 @app.route("/get-content/sections", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getSections():
     token = request.headers.get('x-access-token')
     headers = {
@@ -642,7 +637,6 @@ def getSections():
 
 @app.route("/get-content/ratings", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getRatings():
     token = request.headers.get('x-access-token')
     headers = {
@@ -675,7 +669,6 @@ def getRatings():
 
 @app.route("/get-content/issues", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getIssues():
     token = request.headers.get('x-access-token')
     headers = {
@@ -709,7 +702,6 @@ def getIssues():
 
 @app.route("/get-content/requests", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getRequests():
     token = request.headers.get('x-access-token')
     headers = {
@@ -741,7 +733,6 @@ def getRequests():
 
 @app.route("/get-content/blacklists", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getBan():
     token = request.headers.get('x-access-token')
     headers = {
@@ -774,7 +765,6 @@ def getBan():
 
 @app.route("/get-content/genres", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getGenres():
     token = request.headers.get('x-access-token')
     headers = {
@@ -801,7 +791,6 @@ def getGenres():
 
 @app.route("/get-content/recent-book", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getRecentBook():
     token = request.headers.get('x-access-token')
     headers = {
@@ -872,7 +861,6 @@ def getRecentBook():
 
 @app.route("/search-content", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def searchBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -905,13 +893,11 @@ def searchBooks():
                 "date_added": book.date_added.strftime('%d %b %Y'),
             })
         allData[part] = books_list
-    print(allData)
     return allData, 200
 
 
 @app.route("/search-content/my-books", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def searchMyBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -943,8 +929,8 @@ def searchMyBooks():
 
 
 @app.route("/get-content/myBooks", methods=["GET"])
+@cache.cached(timeout=15)
 @token_required
-@cache.cached(timeout=120)
 def myBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -953,37 +939,62 @@ def myBooks():
     args = request.args.to_dict()
     user_id = args['user_id']
 
-    roger = f"http://127.0.0.1:5000/get-content/issues?user_id={user_id}"
-    fetcher = requests.get(roger, headers=headers).json()[::-1]
-
     today_date = datetime.now()
+    current_books = db.session.query(Books.book_id, Books.book_name, Books.img, Books.author_id, Books.author_name, Issues.request_date, Issues.doi, Issues.dor).join(
+        Issues, Issues.book_id == Books.book_id).filter(Issues.user_id == user_id).filter(Issues.dor > today_date).group_by(Books.book_id).order_by(desc(Issues.dor)).all()
+    history_books = db.session.query(Books.book_id, Books.book_name, Books.img, Books.author_id, Books.author_name, Issues.request_date, Issues.doi, Issues.dor).join(
+        Issues, Issues.book_id == Books.book_id).filter(Issues.user_id == user_id).filter(Issues.dor <= today_date).group_by(Books.book_id).order_by(desc(Issues.dor)).all()
+
     books_list = {"Current": [], "History": []}
-    for issue in fetcher:
-        bookDetails = f"http://127.0.0.1:5000/get-content/books?book_id={issue['book_id']}"
-        fetcherBooks = requests.get(bookDetails, headers=headers).json()[0]
-        request_date = parser.parse(issue["request_date"])
-        doi = parser.parse(issue["doi"][:-3])
-        dor = parser.parse(issue["dor"][:-3])
+    for issue in current_books:
         finalResponse = {
-            "book_id": fetcherBooks["book_id"],
-            "book_name": fetcherBooks["book_name"],
-            "img": fetcherBooks["img"],
-            "author_id": fetcherBooks["author_id"],
-            "author_name": fetcherBooks["author_name"],
-            "request_date": request_date.strftime("%d %b %Y"),
-            "doi": doi.strftime("%d %b %Y"),
-            "dor": dor.strftime("%d %b %Y"),
+            "book_id": issue.book_id,
+            "book_name": issue.book_name,
+            "img": issue.img,
+            "author_id": issue.author_id,
+            "author_name": issue.author_name,
+            "request_date": issue.request_date.strftime("%d %b %Y"),
+            "doi": issue.doi.strftime("%d %b %Y"),
+            "dor": issue.dor.strftime("%d %b %Y"),
         }
-        if today_date < dor:
-            books_list["Current"].append(finalResponse)
-        else:
-            books_list["History"].append(finalResponse)
+        books_list["Current"].append(finalResponse)
+
+    for issue in history_books:
+        finalResponse = {
+            "book_id": issue.book_id,
+            "book_name": issue.book_name,
+            "img": issue.img,
+            "author_id": issue.author_id,
+            "author_name": issue.author_name,
+            "request_date": issue.request_date.strftime("%d %b %Y"),
+            "doi": issue.doi.strftime("%d %b %Y"),
+            "dor": issue.dor.strftime("%d %b %Y"),
+        }
+        books_list["History"].append(finalResponse)
     return books_list, 200
 
+@app.route("/get-read-books")
+@token_required
+def getReadBook():
+    args = request.args.to_dict()
+    user_id = args['user_id']
+    book_id = args['book_id']
+
+    fetchBook = db.session.query(Books, Issues).join(Issues, Books.book_id == Issues.book_id).filter(Issues.user_id == user_id).filter(Issues.book_id == book_id).first()
+    fetchData = {
+        "book_name":fetchBook[0].book_name,
+        "author_name":fetchBook[0].author_name,
+        "author_id":fetchBook[0].author_id,
+        "request_date":fetchBook[1].request_date.strftime("%d %b %Y"),
+        "doi":fetchBook[1].doi.strftime("%d %b %Y"),
+        "dor":fetchBook[1].dor.strftime("%d %b %Y"),
+        "days_left":(fetchBook[1].dor - datetime.now()).days,
+    }
+    return fetchData, 200
 
 @app.route("/get-content/randomBooks", methods=["GET"])
+@cache.cached(timeout=15)
 @token_required
-@cache.cached(timeout=120)
 def randomBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1010,8 +1021,8 @@ def randomBooks():
 
 
 @app.route("/get-statistics", methods=["GET"])
+@cache.cached(timeout=15)
 @token_required
-@cache.cached(timeout=120)
 def getUserStatistics():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1120,47 +1131,46 @@ def getUserStatistics():
 
 @app.route("/get-feedbacks", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def getUserFeedbacks():
     token = request.headers.get('x-access-token')
     headers = {
         'x-access-token': token
     }
     user_id = request.args.to_dict()["user_id"]
-    fetchRating = requests.get(
-        f"http://127.0.0.1:5000/get-content/ratings?user_id={user_id}", headers=headers)
-    fetchRating = fetchRating.json()
-    fetchIssues = requests.get(
-        f"http://127.0.0.1:5000/get-content/issues?user_id={user_id}", headers=headers)
-    fetchIssues = fetchIssues.json()
-    ratings = set([i['book_id'] for i in fetchRating])
-    issues = set([i['book_id'] for i in fetchIssues])
-    notrated = list(issues.difference(ratings))
-    rated = list(ratings)
-    notRatedBooks = []
-    for i in notrated:
-        booker = requests.get(
-            f"http://127.0.0.1:5000/get-content/books?book_id={i}", headers=headers)
-        booker = booker.json()[0]
-        notRatedBooks.append(booker)
-    ratedBooks = []
-    for i in rated:
-        booker = requests.get(
-            f"http://127.0.0.1:5000/get-content/books?book_id={i}", headers=headers)
-        booker = booker.json()[0]
-        feedback = requests.get(
-            f"http://127.0.0.1:5000/get-content/ratings?book_id={i}&user_id={user_id}", headers=headers)
-        feedback = feedback.json()[0]
+    ratedBooks = db.session.query(Books, Ratings.rating, Ratings.feedback).join(
+        Books, Books.book_id == Ratings.book_id).filter(Ratings.user_id == user_id).group_by(Books.book_id).all()
 
-        booker["rating"] = math.ceil(float(feedback["rating"]))
-        booker["feedback"] = feedback["feedback"]
-        ratedBooks.append(booker)
-    return {"Not Rated": notRatedBooks, "Rated": ratedBooks}, 200
+    notRatedBooks = db.session.query(Books).join(Issues, Issues.book_id == Books.book_id).filter(Issues.user_id == user_id).filter(
+        ~exists().where((Ratings.book_id == Issues.book_id) & (Ratings.user_id == Issues.user_id))).all()
+    ratedBooksList = [{
+        "book_id": book[0].book_id,
+        "book_name": book[0].book_name,
+        "img": book[0].img,
+        "author_id": book[0].author_id,
+        "author_name": book[0].author_name,
+        "section_id": book[0].section_id,
+        "genre": book[0].genre,
+        "date_added": book[0].date_added,
+        "rating": math.ceil(float(book[1])),
+        "feedback": book[2],
+    } for book in ratedBooks]
+
+    notRatedBooksList = [{
+        "book_id": book.book_id,
+        "book_name": book.book_name,
+        "img": book.img,
+        "author_id": book.author_id,
+        "author_name": book.author_name,
+        "section_id": book.section_id,
+        "genre": book.genre,
+        "date_added": book.date_added
+    } for book in notRatedBooks]
+
+    return {"Not Rated": notRatedBooksList, "Rated": ratedBooksList}, 200
 
 
 @app.route("/get-librarian/previewBook", methods=["GET"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def getLibrarianBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1195,7 +1205,6 @@ def getLibrarianBooks():
 
 @app.route("/get-librarian/previewSection", methods=["GET"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def getLibrarianSections():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1210,7 +1219,6 @@ def getLibrarianSections():
 
 @app.route("/get-librarian/previewAuthor", methods=["GET"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def getLibrarianAuthor():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1231,7 +1239,6 @@ def getLibrarianAuthor():
 
 @app.route("/get-librarian/requests", methods=["GET"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def getLibrarianRequests():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1254,7 +1261,6 @@ def getLibrarianRequests():
 
 @app.route("/get-librarian/issues", methods=["GET"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def getLibrarianIssues():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1280,7 +1286,6 @@ def getLibrarianIssues():
 
 @app.route("/get-librarian/current-user-issues")
 @librarian_token_required
-@cache.cached(timeout=120)
 def getLibrarianCurrentIssues():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1300,12 +1305,10 @@ def getLibrarianCurrentIssues():
 
     return jsonify({"count": current_issues}), 200
 
+
 # Librarian Dashboard Statistics
-
-
 @app.route("/get-statistics/librarian/users")
 @librarian_token_required
-@cache.cached(timeout=120)
 def getStatisticsLibrarianUsers():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1363,7 +1366,6 @@ def getStatisticsLibrarianUsers():
 
 @app.route("/get-statistics/librarian/books")
 @librarian_token_required
-@cache.cached(timeout=120)
 def getStatisticsLibrarianBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1401,7 +1403,6 @@ def getStatisticsLibrarianBooks():
 
 @app.route("/get-statistics/librarian/authors")
 @librarian_token_required
-@cache.cached(timeout=120)
 def getStatisticsLibrarianAuthors():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1453,7 +1454,6 @@ def getStatisticsLibrarianAuthors():
 # Data Insertion
 @app.route("/push-content/books", methods=["GET", "POST"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def pushBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1486,7 +1486,6 @@ def pushBooks():
 
 @app.route("/push-content/newBook", methods=["GET", "POST"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def pushNewBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1502,7 +1501,6 @@ def pushNewBooks():
             if fetcherAuthor.status_code == 404:
                 abort(
                     406, description=f"Author with name: {form['author_name']} not found. Create new author.")
-                # return jsonify(message=f"Author with name: {form['author_name']} not found. Create new author."), 406
             else:
                 last_id = Books.query.order_by(
                     Books.book_id.desc()).first().book_id
@@ -1526,7 +1524,6 @@ def pushNewBooks():
 
 @app.route("/push-content/authors", methods=["GET", "POST"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def pushAuthors():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1558,7 +1555,6 @@ def pushAuthors():
 
 @app.route("/push-content/users", methods=["GET", "POST"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def pushUsers():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1592,7 +1588,6 @@ def pushUsers():
 
 @app.route("/push-content/sections", methods=["GET", "POST"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def pushSections():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1621,7 +1616,6 @@ def pushSections():
 
 @app.route("/push-content/ratings", methods=["GET", "POST"])
 @token_required
-@cache.cached(timeout=120)
 def pushRatings():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1650,7 +1644,6 @@ def pushRatings():
 
 @app.route("/push-content/issues", methods=["GET", "POST"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def pushIssues():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1684,16 +1677,12 @@ def pushIssues():
 
 @app.route("/push-content/requests", methods=["GET"])
 @token_required
-@cache.cached(timeout=120)
 def pushRequests():
     token = request.headers.get('x-access-token')
     headers = {
         'x-access-token': token
     }
     form = request.args.to_dict()
-    # roger = f"http://127.0.0.1:5000/get-content/requests?book_id={form['book_id']}&user_id={form['user_id']}"
-    # fetcher = requests.get(roger,headers=headers)
-    # if fetcher.status_code == 404:
     new_issue = Requests(
         book_id=form["book_id"],
         user_id=form["user_id"],
@@ -1703,13 +1692,10 @@ def pushRequests():
     db.session.add(new_issue)
     db.session.commit()
     return f"New Requests added Book ID: {form['book_id']} & User ID: {form['user_id']}", 200
-    # else:
-    #     abort(406)
 
 
 @app.route("/push-content/blacklists", methods=["GET", "POST"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def pushBan():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1734,7 +1720,6 @@ def pushBan():
 # Data Updation
 @app.route("/put-content/books", methods=["GET", "PUT"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def putBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1759,7 +1744,6 @@ def putBooks():
 
 @app.route("/put-content/authors", methods=["GET", "PUT"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def putAuthors():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1784,7 +1768,6 @@ def putAuthors():
 
 @app.route("/put-content/users", methods=["GET", "PUT"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def putUsers():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1809,7 +1792,6 @@ def putUsers():
 
 @app.route("/put-content/sections", methods=["GET", "PUT"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def putSections():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1836,7 +1818,6 @@ def putSections():
 
 @app.route("/put-content/ratings", methods=["GET", "PUT"])
 @token_required
-@cache.cached(timeout=120)
 def putRatings():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1864,7 +1845,6 @@ def putRatings():
 
 @app.route("/put-content/issues", methods=["GET", "PUT"])
 @token_required
-@cache.cached(timeout=120)
 def putIssues():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1885,7 +1865,6 @@ def putIssues():
 
 @app.route("/put-content/librarian/issues", methods=["GET", "PUT"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def putLibrarianIssues():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1906,7 +1885,6 @@ def putLibrarianIssues():
 
 @app.route("/put-content/blacklists", methods=["GET", "PUT"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def putBan():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1930,7 +1908,6 @@ def putBan():
 # Data Deletion
 @app.route("/delete-content/books", methods=["GET", "DELETE"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def deleteBooks():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1948,7 +1925,6 @@ def deleteBooks():
 
 @app.route("/delete-content/authors", methods=["GET", "DELETE"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def deleteAuthors():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1966,7 +1942,6 @@ def deleteAuthors():
 
 @app.route("/delete-content/users", methods=["GET", "DELETE"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def deleteUsers():
     token = request.headers.get('x-access-token')
     headers = {
@@ -1984,7 +1959,6 @@ def deleteUsers():
 
 @app.route("/delete-content/sections", methods=["GET", "DELETE"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def deleteSections():
     token = request.headers.get('x-access-token')
     headers = {
@@ -2002,7 +1976,6 @@ def deleteSections():
 
 @app.route("/delete-content/ratings", methods=["GET", "DELETE"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def deleteRatings():
     token = request.headers.get('x-access-token')
     headers = {
@@ -2021,7 +1994,6 @@ def deleteRatings():
 
 @app.route("/delete-content/issues", methods=["GET", "DELETE"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def deleteIssues():
     token = request.headers.get('x-access-token')
     headers = {
@@ -2040,7 +2012,6 @@ def deleteIssues():
 
 @app.route("/delete-content/requests", methods=["GET", "DELETE"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def deleteRequests():
     token = request.headers.get('x-access-token')
     headers = {
@@ -2059,7 +2030,6 @@ def deleteRequests():
 
 @app.route("/delete-content/blacklists", methods=["GET", "DELETE"])
 @librarian_token_required
-@cache.cached(timeout=120)
 def deleteBan():
     token = request.headers.get('x-access-token')
     headers = {
