@@ -810,8 +810,7 @@ def getRecentBook():
     if fetchRating != []:
         for rating in fetchRating:
             sum_rate += float(rating.rating)
-            roger = f"http://127.0.0.1:5000/get-content/users?user_id={rating.user_id}"
-            fetcher = requests.get(roger, headers=headers).json()[0]
+            fetcher = Users.query.filter_by(user_id=rating.user_id).first()
             ratingReturn = {
                 "sno": rating.sno,
                 "user_id": rating.user_id,
@@ -1179,30 +1178,24 @@ def getLibrarianBooks():
         'x-access-token': token
     }
     book_id = request.args.to_dict()["book_id"]
-    booker = requests.get(
-        f"http://127.0.0.1:5000/get-content/books?book_id={book_id}", headers=headers)
-    booker = booker.json()[0]
-    section = Sections.query.filter_by(section_id=booker["section_id"]).first()
+    bookfetch = Books.query.filter_by(book_id=book_id).first()
+    booker = {
+        "book_id": bookfetch.book_id,
+        "book_name": bookfetch.book_name,
+        "img": bookfetch.img,
+        "author_name": bookfetch.author_name,
+        "author_id": bookfetch.author_id,
+        "section_id": bookfetch.section_id,
+        "genre": bookfetch.genre,
+        "date_added": bookfetch.date_added,
+    }
+    section = Sections.query.filter_by(section_id=bookfetch.section_id).first()
     booker["section_name"] = section.section_name
-    issues = requests.get(
-        f"http://127.0.0.1:5000/get-content/issues?book_id={book_id}", headers=headers)
-    if issues.status_code == 200:
-        issues = issues.json()
-    else:
-        issues = []
-    requester = requests.get(
-        f"http://127.0.0.1:5000/get-content/requests?book_id={book_id}", headers=headers)
-    if requester.status_code == 200:
-        requester = requester.json()
-    else:
-        requester = []
-    rater = requests.get(
-        f"http://127.0.0.1:5000/get-content/ratings?book_id={book_id}", headers=headers)
-    if rater.status_code == 200:
-        rater = [float(i['rating']) for i in rater.json()]
-    else:
-        rater = []
-    return {"book": booker, "issues": len(issues), "requests": len(requester), "avg_rating": sum(rater)/len(rater) if len(rater) != 0 else 0}
+    issues = Issues.query.filter_by(book_id=book_id).all()
+    requester = Requests.query.filter_by(book_id=book_id).all()
+    rater = db.session.query(Books.book_id, func.avg(Ratings.rating)).join(
+        Books, Books.book_id == Ratings.book_id).filter(Books.book_id == book_id).first()
+    return {"book": booker, "issues": len(issues), "requests": len(requester), "avg_rating": rater[1] if rater[1] else 0}
 
 
 @app.route("/get-librarian/previewSection", methods=["GET"])
@@ -1213,30 +1206,37 @@ def getLibrarianSections():
         'x-access-token': token
     }
     section_id = request.args.to_dict()["section_id"]
-    sectioner = requests.get(
-        f"http://127.0.0.1:5000/get-content/sections?section_id={section_id}", headers=headers)
-    sectioner = sectioner.json()[0]
-    return sectioner, 200
+    sectioner = Sections.query.filter_by(section_id=section_id).first()
+    sect = {
+        "section_id": sectioner.section_id,
+        "section_name": sectioner.section_name,
+        "img": sectioner.img,
+        "date_added": sectioner.date_added,
+    }
+    print(sect)
+    return sect, 200
 
 
 @app.route("/get-librarian/previewAuthor", methods=["GET"])
-@librarian_token_required
+# @librarian_token_required
 def getLibrarianAuthor():
     token = request.headers.get('x-access-token')
     headers = {
         'x-access-token': token
     }
     author_id = request.args.to_dict()["author_id"]
-    sectioner = requests.get(
-        f"http://127.0.0.1:5000/get-content/authors?author_id={author_id}", headers=headers)
-    sectioner = sectioner.json()[0]
-    booker = requests.get(
-        f"http://127.0.0.1:5000/get-content/books?author_id={author_id}", headers=headers)
-    if booker.status_code == 200:
-        booker = booker.json()
-    else:
-        booker = []
-    return {"authorData": sectioner, "numBooks": len(booker)}, 200
+    authorer = Authors.query.filter_by(author_id=author_id).first()
+    author_data = {
+        "author_id": authorer.author_id,
+        "author_name": authorer.author_name,
+        "img": authorer.img,
+        "dob": authorer.dob,
+        "dod": authorer.dod,
+        "country": authorer.country,
+        "avg_rating": authorer.avg_rating,
+    }
+    booker = Books.query.filter_by(author_id=author_id).all()
+    return {"authorData": author_data, "numBooks": len(booker)}, 200
 
 
 @app.route("/get-librarian/requests", methods=["GET"])
@@ -1462,10 +1462,9 @@ def pushBooks():
         'x-access-token': token
     }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/books?book_name={form['book_name']}"
-    fetcher = requests.get(roger, headers=headers)
+    fetcher = Books.query.filter_by(book_name=form['book_name']).first()
     if request.method == "POST":
-        if fetcher.status_code == 404:
+        if fetcher == None:
             last_id = Books.query.order_by(
                 Books.book_id.desc()).first().book_id
             next_id = nextID(last_id)
@@ -1477,7 +1476,8 @@ def pushBooks():
                 author_name=form["author_name"],
                 section_id=form["section_id"],
                 genre=form["genre"],
-                date_added=datetime.strptime(form["date_added"], "%Y-%m-%d")
+                date_added=datetime.strptime(
+                    form["date_added"], "%Y-%m-%d") if "date_added" in form else datetime.now()
             )
             db.session.add(new_book)
             db.session.commit()
@@ -1487,20 +1487,19 @@ def pushBooks():
 
 
 @app.route("/push-content/newBook", methods=["GET", "POST"])
-@librarian_token_required
+# @librarian_token_required
 def pushNewBooks():
     token = request.headers.get('x-access-token')
     headers = {
         'x-access-token': token
     }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/books?book_name={form['book_name']}"
-    fetcher = requests.get(roger, headers=headers)
+    fetcher = Books.query.filter_by(book_name=form['book_name']).first()
     if request.method == "POST":
-        if fetcher.status_code == 404:
-            rogerAuthor = f"http://127.0.0.1:5000/get-content/authors?author_name={form['author_name']}"
-            fetcherAuthor = requests.get(rogerAuthor, headers=headers)
-            if fetcherAuthor.status_code == 404:
+        if fetcher == None:
+            fetcherAuthor = Authors.query.filter_by(
+                author_name=form['author_name']).first()
+            if fetcherAuthor == None:
                 abort(
                     406, description=f"Author with name: {form['author_name']} not found. Create new author.")
             else:
@@ -1511,7 +1510,7 @@ def pushNewBooks():
                     book_id=next_id,
                     book_name=form["book_name"],
                     img=form["img"],
-                    author_id=fetcherAuthor.json()[0]["author_id"],
+                    author_id=fetcherAuthor.author_id,
                     author_name=form["author_name"],
                     section_id=form["section_id"],
                     genre=form["genre"],
@@ -1532,10 +1531,9 @@ def pushAuthors():
         'x-access-token': token
     }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/authors?author_name={form['author_name']}"
-    fetcher = requests.get(roger, headers=headers)
+    fetcher = Authors.query.filter_by(author_name=form['author_name']).first()
     if request.method == "POST":
-        if fetcher.status_code == 404:
+        if fetcher == None:
             last_id = Authors.query.order_by(
                 Authors.author_id.desc()).first().author_id
             next_id = nextID(last_id)
@@ -1550,9 +1548,9 @@ def pushAuthors():
             )
             db.session.add(new_author)
             db.session.commit()
-            return jsonify(message=f"New Section added with ID: {next_id}"), 200
+            return jsonify(message=f"New Author added with ID: {next_id}"), 200
         else:
-            return jsonify(message=f"Section already exists: {next_id}"), 404
+            return jsonify(message=f"Author already exists: {next_id}"), 404
 
 
 @app.route("/push-content/users", methods=["GET", "POST"])
@@ -1596,10 +1594,10 @@ def pushSections():
         'x-access-token': token
     }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/sections?section_name={form['section_name']}"
-    fetcher = requests.get(roger, headers=headers)
+    fetcher = Sections.query.filter_by(
+        section_name=form['section_name']).first()
     if request.method == "POST":
-        if fetcher.status_code == 404:
+        if fetcher == None:
             last_id = Sections.query.order_by(
                 Sections.section_id.desc()).first().section_id
             next_id = nextID(last_id)
@@ -1624,10 +1622,10 @@ def pushRatings():
         'x-access-token': token
     }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
-    fetcher = requests.get(roger, headers=headers)
+    fetcher = Ratings.query.filter_by(
+        book_id=form['book_id'], user_id=form['user_id']).first()
     if request.method == "POST":
-        if fetcher.status_code == 404:
+        if fetcher == None:
             last_id = Ratings.query.order_by(Ratings.sno.desc()).first().sno
             next_id = last_id+1
             new_rating = Ratings(
@@ -1652,10 +1650,10 @@ def pushIssues():
         'x-access-token': token
     }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/issues?book_id={form['book_id']}&user_id={form['user_id']}"
-    fetcher = requests.get(roger, headers=headers)
+    fetcher = Issues.query.filter_by(
+        book_id=form['book_id'], user_id=form['user_id']).first()
     if request.method == "POST":
-        if fetcher.status_code == 404:
+        if fetcher == None:
             last_id = Issues.query.order_by(Issues.sno.desc()).first().sno
             next_id = last_id+1
             new_issue = Issues(
@@ -1704,9 +1702,8 @@ def pushBan():
         'x-access-token': token
     }
     form = request.get_json()
-    roger = f"http://127.0.0.1:5000/get-content/blacklists?user_id={form['user_id']}"
-    fetcher = requests.get(roger, headers=headers)
-    if fetcher.status_code == 404:
+    fetcher = Blacklists.query.filter_by(user_id=form['user_id']).first()
+    if fetcher == None:
         new_ban = Blacklists(
             user_id=form["user_id"],
             ban_type=form["ban_type"],
@@ -1737,9 +1734,18 @@ def putBooks():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/books?book_id={form['book_id']}"
-            fetcher = requests.get(roger, headers=headers).json()
-            return fetcher, 200
+            fetcher = Books.query.filter_by(book_id=form['book_id']).first()
+            finalResponse = {
+                "book_id": fetcher.book_id,
+                "book_name": fetcher.book_name,
+                "img": fetcher.img,
+                "author_id": fetcher.author_id,
+                "author_name": fetcher.author_name,
+                "request_date": fetcher.request_date.strftime("%d %b %Y"),
+                "doi": fetcher.doi.strftime("%d %b %Y"),
+                "dor": fetcher.dor.strftime("%d %b %Y"),
+            }
+            return finalResponse, 200
         else:
             return {"message": "Book do not exists."}, 406
 
@@ -1761,9 +1767,18 @@ def putAuthors():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/authors?author_id={form['author_id']}"
-            fetcher = requests.get(roger, headers=headers).json()
-            return fetcher, 200
+            fetcher = Authors.query.filter_by(
+                author_id=form['author_id']).first()
+            finalRes = {
+                "author_id": fetcher.author_id,
+                "author_name": fetcher.author_name,
+                "img": fetcher.img,
+                "dob": fetcher.dob,
+                "dod": fetcher.dod,
+                "country": fetcher.country,
+                "avg_rating": fetcher.avg_rating,
+            }
+            return finalRes, 200
         else:
             return {"message": "Author do not exists."}, 406
 
@@ -1785,9 +1800,19 @@ def putUsers():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/users?user_id={form['user_id']}"
-            fetcher = requests.get(roger, headers=headers).json()
-            return fetcher, 200
+            fetcher = Users.query.filter_by(user_id=form['user_id']).first()
+            fetchUsers = {
+                "user_id": fetcher.user_id,
+                "user_name": fetcher.user_name,
+                "password": fetcher.password,
+                "email": fetcher.email,
+                "ph_no": fetcher.ph_no,
+                "last_loged": fetcher.last_loged,
+                "gender": fetcher.gender,
+                "doj": fetcher.doj,
+                "dob": fetcher.dob
+            }
+            return fetchUsers, 200
         else:
             return {"message": "User do not exists."}, 406
 
@@ -1809,9 +1834,15 @@ def putSections():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/sections?section_id={form['section_id']}"
-            fetcher = requests.get(roger, headers=headers).json()
-            return fetcher, 200
+            fetcher = Sections.query.filter_by(
+                section_id=form['section_id']).first()
+            fetchSection = {
+                "section_id": fetcher.section_id,
+                "section_name": fetcher.section_name,
+                "img": fetcher.img,
+                "date_added": fetcher.date_added
+            }
+            return fetchSection, 200
         else:
             return {"message": "Section do not exists."}, 406
 
@@ -1836,9 +1867,16 @@ def putRatings():
                 except:
                     setattr(fetcher, i, form[i])
             db.session.commit()
-            roger = f"http://127.0.0.1:5000/get-content/ratings?book_id={form['book_id']}&user_id={form['user_id']}"
-            fetcher = requests.get(roger, headers=headers).json()
-            return fetcher, 200
+            fetcher = Ratings.query.filter_by(
+                book_id=form["book_id"], user_id=form["user_id"]).first()
+            fetcherRating = {
+                "sno": fetcher.sno,
+                "book_id": fetcher.book_id,
+                "user_id": fetcher.user_id,
+                "rating": fetcher.rating,
+                "feedback": fetcher.feedback
+            }
+            return fetcherRating, 200
         else:
             return {"message": "Rating do not exists."}, 406
 

@@ -46,7 +46,6 @@ export default {
 .pdfViewer {
   width: 90rem;
   height: 200rem;
-  background: aqua;
 }
 .pdf {
   height: 100%;

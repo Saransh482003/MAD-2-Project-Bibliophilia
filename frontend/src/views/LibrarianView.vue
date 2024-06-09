@@ -1513,7 +1513,7 @@ export default {
         this.changePreviewUser(user_id);
         console.log("Success:", response.data);
       } catch (error) {
-        alert("Unable to Ban the User.");
+        alert("Unable to Intedict the User.");
       }
     },
     async revokeInterdict(user_id) {

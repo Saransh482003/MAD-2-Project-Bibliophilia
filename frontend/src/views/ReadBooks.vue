@@ -63,7 +63,6 @@ export default {
         .get(`/get-read-books?user_id=${this.user_id}&book_id=${this.book_id}`)
         .then((response) => {
           this.bookdetails = response.data;
-          console.log(this.bookdetails);
         })
         .catch(() => {
           this.$router.push("/my-books");
@@ -130,7 +129,6 @@ export default {
   display: flex;
   width: 40rem;
   height: 60rem;
-  background-color: aqua;
   border-radius: 0.5rem;
 }
 .bookPage:first-child {
