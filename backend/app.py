@@ -1,25 +1,25 @@
 from flask import Flask, jsonify, request, abort, send_file, render_template
-from functools import wraps
-import jwt
-from sqlalchemy.sql.expression import func, desc, case, exists
 from flask_cors import CORS
 from flask_caching import Cache
-from models import *
-import random
+from sqlalchemy.sql.expression import func, desc, case, exists
 import requests
-import math
-import calendar
-from datetime import datetime, timedelta
+from models import *
 from celery_config import celery_init_app
 from celery.result import AsyncResult
 from celery import shared_task
 from celery.contrib.abortable import AbortableTask
-import pandas as pd
-import os
 from celery.schedules import crontab
 import smtplib
 import ssl
 from email.message import EmailMessage
+import random
+import pandas as pd
+import os
+import math
+import calendar
+from datetime import datetime, timedelta
+from functools import wraps
+import jwt
 
 
 app = Flask(__name__)
@@ -973,6 +973,7 @@ def myBooks():
         books_list["History"].append(finalResponse)
     return books_list, 200
 
+
 @app.route("/get-read-books")
 @token_required
 def getReadBook():
@@ -980,20 +981,21 @@ def getReadBook():
     user_id = args['user_id']
     book_id = args['book_id']
 
-    fetchBook = db.session.query(Books, Issues).join(Issues, Books.book_id == Issues.book_id).filter(Issues.user_id == user_id).filter(Issues.book_id == book_id).first()
+    fetchBook = db.session.query(Books, Issues).join(Issues, Books.book_id == Issues.book_id).filter(
+        Issues.user_id == user_id).filter(Issues.book_id == book_id).first()
     fetchData = {
-        "book_name":fetchBook[0].book_name,
-        "author_name":fetchBook[0].author_name,
-        "author_id":fetchBook[0].author_id,
-        "request_date":fetchBook[1].request_date.strftime("%d %b %Y"),
-        "doi":fetchBook[1].doi.strftime("%d %b %Y"),
-        "dor":fetchBook[1].dor.strftime("%d %b %Y"),
-        "days_left":(fetchBook[1].dor - datetime.now()).days,
+        "book_name": fetchBook[0].book_name,
+        "author_name": fetchBook[0].author_name,
+        "author_id": fetchBook[0].author_id,
+        "request_date": fetchBook[1].request_date.strftime("%d %b %Y"),
+        "doi": fetchBook[1].doi.strftime("%d %b %Y"),
+        "dor": fetchBook[1].dor.strftime("%d %b %Y"),
+        "days_left": (fetchBook[1].dor - datetime.now()).days,
     }
     return fetchData, 200
 
+
 @app.route("/get-content/randomBooks", methods=["GET"])
-@cache.cached(timeout=15)
 @token_required
 def randomBooks():
     token = request.headers.get('x-access-token')

@@ -1,6 +1,16 @@
 <template>
   <div class="middle">
-    <div class="mainPanel"></div>
+    <div class="mainPanel">
+      <div class="pdfViewer">
+        <embed
+          src="/Saransh Saini 22F1001123 IIT Madras MAD 2 Project Bibliophilia.pdf"
+          width="600"
+          height="500"
+          type="application/pdf"
+          class="pdf"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -26,11 +36,20 @@ export default {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  width: 95%;
+  width: 100%;
   height: 100%;
   padding-bottom: 1.4rem;
   padding-top: 0.7rem;
   overflow: hidden;
   overflow-y: scroll;
+}
+.pdfViewer {
+  width: 90rem;
+  height: 200rem;
+  background: aqua;
+}
+.pdf {
+  height: 100%;
+  width: 100%;
 }
 </style>

@@ -2952,7 +2952,7 @@ export default {
   /* background-color: #e6ac45; */
 }
 .userBarChart::before {
-  content: "Past 12 Months Activity";
+  content: "Past 10 Months Activity";
   padding-right: 1rem;
   font-weight: 600;
   font-size: 1rem;
