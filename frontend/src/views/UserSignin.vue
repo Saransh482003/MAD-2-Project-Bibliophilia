@@ -30,7 +30,7 @@
                   />
                 </div>
               </div>
-              <div class="statInfo">2L + <br />Books</div>
+              <div class="statInfo">50K + <br />Books</div>
             </div>
             <div class="statCard">
               <div class="upperCont">
@@ -42,7 +42,7 @@
                   />
                 </div>
               </div>
-              <div class="statInfo">80K + <br />Authors</div>
+              <div class="statInfo">25K + <br />Authors</div>
             </div>
             <div class="statCard">
               <div class="upperCont">
@@ -302,10 +302,10 @@ export default {
                   },
                 }
               )
-              .then((responsible) => {
-                localStorage.setItem("user_id", responsible.data[0].user_id);
-                localStorage.setItem("user_gender", responsible.data[0].gender);
-                window.location.href = "/home";
+              .then(() => {
+                this.signinView = true;
+                this.message =
+                  "Kindly SignIn with your new credentials to continue.";
               })
               .catch(() => {
                 alert("There was an unexpected error.");
@@ -331,7 +331,7 @@ export default {
 .baseRoot {
   height: 45.6rem;
   width: 100%;
-  background: url("@/assets/images/signin_bg.jpg");
+  background: url("https://github.com/Saransh482003/Image-hosting/blob/main/signin_bg.jpg?raw=true");
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center center;

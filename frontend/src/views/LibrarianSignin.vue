@@ -31,7 +31,7 @@
                   />
                 </div>
               </div>
-              <div class="statInfo">2L + <br />Books</div>
+              <div class="statInfo">50K + <br />Books</div>
             </div>
             <div class="statCard">
               <div class="upperCont">
@@ -43,7 +43,7 @@
                   />
                 </div>
               </div>
-              <div class="statInfo">80K + <br />Authors</div>
+              <div class="statInfo">25K + <br />Authors</div>
             </div>
             <div class="statCard">
               <div class="upperCont">

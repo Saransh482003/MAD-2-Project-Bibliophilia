@@ -2,7 +2,7 @@ from models import *
 import sqlite3
 import pandas as pd
 
-books = pd.read_excel("books.xlsx", sheet_name="3 Users")
+books = pd.read_excel("books.xlsx", sheet_name="1 Books")
 print(books)
 conn = sqlite3.connect("instance/library.sqlite3")
 cursor = conn.cursor()
@@ -11,8 +11,8 @@ for i in range(len(books)):
     row = books.iloc[i]
     # print(row['Author_ID'])
     cursor.execute(f"""
-        INSERT INTO Users (user_id, user_name, password, email, ph_no, last_loged, gender, doj, dob) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (row['User_ID'], row['User_Name'], row['Password'], row['Email'], f"{row['Phone_No']}", f"{row['Last_Loged']}", row['Gender'], f"{row['DOJ']}", f"{row['DOB']}"))
+        INSERT INTO Books (book_id, book_name, img, author_id, author_name, section_id, genre, date_added) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (row['Book_ID'], row['Title'], row['Img'], row['Author_ID'], row['Author_Name'], row['Section_ID'], row['Genre'], f"{row['Date_Added']}"))
 conn.commit()
 conn.close()

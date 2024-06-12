@@ -402,11 +402,7 @@
       </div>
       <div class="actions">
         <div
-          :class="`actionBtns ${
-            (allowedRequest.status == 602) | (allowedRequest.status == 603)
-              ? 'disableBtn'
-              : ''
-          }`"
+          :class="`actionBtns ${!allowedRequest.allowed ? 'disableBtn' : ''}`"
           @click="request_book($event, previewBook.book_id)"
           :title="allowedRequest.message"
         >
@@ -414,9 +410,7 @@
             src="@/assets/images/request_book.png"
             alt=""
             :class="`actionBtnImg ${
-              (allowedRequest.status == 602) | (allowedRequest.status == 603)
-                ? 'disableBtnImg'
-                : ''
+              !allowedRequest.allowed ? 'disableBtnImg' : ''
             }`"
           />
           Request
@@ -454,9 +448,8 @@ export default {
       latestBooks: [],
       previewBook: {},
       allowedRequest: {
-        status: 601,
-        message: "Click to Request Book",
-        limit: 0,
+        allowed: true,
+        message: "Click to Request",
       },
       user_id: localStorage.getItem("user_id"),
       changeView: 1,
@@ -470,14 +463,6 @@ export default {
     this.fetchMyBooks();
     this.fetchBooks();
   },
-  // watch: {
-  //   previewBook: {
-  //     handler(newVal, oldVal) {
-  //       console.log("Preview book changed:", newVal, oldVal);
-  //     },
-  //     deep: true,
-  //   },
-  // },
   watch: {
     keyword(newKeyword) {
       this.bookSearcher(newKeyword);
@@ -545,8 +530,8 @@ export default {
         })
         .catch(() => {});
     },
-    changePreviewBook(book_id) {
-      axios
+    async changePreviewBook(book_id) {
+      await axios
         .get(`/get-content/recent-book?book_id=${book_id}`)
         .then((response) => {
           this.previewBook = response.data;
@@ -559,32 +544,70 @@ export default {
           this.previewBook.author_avg_rating =
             this.previewBook.author_avg_rating.toFixed(1);
         })
-        .catch(() => {
-          this.$router.push("/error");
-        });
-      this.requestAllowance(book_id, this.user_id);
-    },
-    requestAllowance(book_id, user_id) {
-      axios
-        .get(`/get-content/issues?book_id=${book_id}&user_id=${user_id}`)
         .then(() => {
-          this.allowedRequest.status = 602;
-          this.allowedRequest.message = "Book already issued";
-        })
-        .catch(() => {
           axios
-            .get(`/get-content/requests?book_id=${book_id}&user_id=${user_id}`)
-            .then((response) => {
-              if (response.data.length >= 5) {
-                this.allowedRequest.status = 603;
-                this.allowedRequest.message = "Already Requested";
-              } else {
-                this.allowedRequest.limit = 5 - response.data.length;
+            .get(`/get-content/issues?user_id=${this.user_id}`)
+            .then((responser) => {
+              let currentIssueCount = 0;
+              let bookAlreadyIssued = false;
+              for (let issue of responser.data) {
+                if (issue.book_id === book_id) {
+                  bookAlreadyIssued = true;
+                  break;
+                }
               }
+              axios
+                .get(
+                  `/get-content/requests?user_id=${this.user_id}&book_id=${book_id}`
+                )
+                .then(() => {
+                  this.allowedRequest = {
+                    allowed: false,
+                    message: "Book already requested.",
+                  };
+                })
+                .catch(() => {
+                  for (let issue of responser.data) {
+                    if (issue.return_days_left != -1) {
+                      currentIssueCount++;
+                    }
+                  }
+                  if (bookAlreadyIssued) {
+                    this.allowedRequest = {
+                      allowed: false,
+                      message: "Book already issued.",
+                    };
+                  } else if (currentIssueCount >= 5) {
+                    this.allowedRequest = {
+                      allowed: false,
+                      message:
+                        "You can't issue/request for more than 5 books at a moment.",
+                    };
+                  } else {
+                    this.allowedRequest = {
+                      allowed: true,
+                      message: "Click to Request.",
+                    };
+                  }
+                });
             })
             .catch(() => {
-              this.allowedRequest.status = 601;
-              this.allowedRequest.message = "Click to Request";
+              axios
+                .get(
+                  `/get-content/requests?user_id=${this.user_id}&book_id=${book_id}`
+                )
+                .then(() => {
+                  this.allowedRequest = {
+                    allowed: false,
+                    message: "Book already requested.",
+                  };
+                })
+                .catch(() => {
+                  this.allowedRequest = {
+                    allowed: true,
+                    message: "Click to Request.",
+                  };
+                });
             });
         })
         .catch(() => {
@@ -672,7 +695,7 @@ export default {
     request_book(event, book_id) {
       event.preventDefault();
       event.stopPropagation();
-      if (this.allowedRequest.status == 601) {
+      if (this.allowedRequest.allowed) {
         const today = new Date();
         const day = today.getDate().toString().padStart(2, "0");
         const month = (today.getMonth() + 1).toString().padStart(2, "0");
@@ -682,9 +705,7 @@ export default {
             `/push-content/requests?book_id=${book_id}&user_id=${this.user_id}&request_date=${year}-${month}-${day}`
           )
           .then(() => {
-            console.log(
-              `Request successfully made for Book ID ${book_id} User ID ${this.user_id}`
-            );
+            this.changePreviewBook(book_id);
           })
           .catch((error) => {
             console.error("There was an error making the POST request!", error);
@@ -730,7 +751,7 @@ export default {
   flex-wrap: wrap;
   width: 100%;
   height: 40.1rem;
-  background: url("@/assets/images/biblio_bg.jpg");
+  background: url("https://github.com/Saransh482003/Image-hosting/blob/main/biblio_bg.jpg?raw=true");
   background-position: center center;
   background-size: cover;
   background-repeat: no-repeat;

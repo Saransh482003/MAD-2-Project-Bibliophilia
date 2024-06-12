@@ -691,9 +691,10 @@ def getIssues():
                 "sno": issue.sno,
                 "book_id": issue.book_id,
                 "user_id": issue.user_id,
-                "request_date": issue.request_date,
-                "doi": issue.doi,
-                "dor": issue.dor,
+                "request_date": issue.request_date.strftime("%d %b %Y"),
+                "doi": issue.doi.strftime("%d %b %Y"),
+                "dor": issue.dor.strftime("%d %b %Y"),
+                "return_days_left": (issue.dor - datetime.now()).days if issue.dor > datetime.now() else -1
             })
         return issues_list, 200
     else:
@@ -802,25 +803,28 @@ def getRecentBook():
         author_id=fetchBook.author_id).first()
     fetchSection = Sections.query.filter_by(
         section_id=fetchBook.section_id).first()
-    fetchRating = Ratings.query.filter_by(book_id=book_id).all()
+    book_avg_rating = db.session.query(Ratings.book_id, func.avg(Ratings.rating)).filter(Ratings.book_id==book_id).first()
     fetchIssue = Issues.query.filter_by(book_id=book_id).all()
-    ratings = []
-    sum_rate = 0
-    book_avg_rating = 0
-    if fetchRating != []:
-        for rating in fetchRating:
-            sum_rate += float(rating.rating)
-            fetcher = Users.query.filter_by(user_id=rating.user_id).first()
+    if book_avg_rating[0] != None:
+        book_avg_rating = float(book_avg_rating[1])
+        fetchRating = db.session.query(Users,Ratings).join(Users, Users.user_id==Ratings.user_id).filter(Ratings.book_id==book_id).group_by(Users.user_id).order_by(desc(Ratings.rating)).all()
+        ratings = []
+        for (user,ratinger) in fetchRating:
             ratingReturn = {
-                "sno": rating.sno,
-                "user_id": rating.user_id,
-                "rating": rating.rating,
-                "feedback": rating.feedback,
+                "user_id": user.user_id,
+                "user_name": user.user_name,
+                "password": user.password,
+                "email": user.email,
+                "ph_no": user.ph_no,
+                "last_loged": user.last_loged,
+                "gender": user.gender,
+                "doj": user.doj,
+                "dob": user.dob,
+                "sno": ratinger.sno,
+                "rating": ratinger.rating,
+                "feedback": ratinger.feedback,
             }
-            ratingReturn.update(fetcher)
             ratings.append(ratingReturn)
-
-        book_avg_rating = sum_rate/len(fetchRating)
     else:
         book_avg_rating = random.randrange(1, 5)
 
@@ -1022,7 +1026,6 @@ def randomBooks():
 
 
 @app.route("/get-statistics", methods=["GET"])
-@cache.cached(timeout=15)
 @token_required
 def getUserStatistics():
     token = request.headers.get('x-access-token')
@@ -1046,6 +1049,7 @@ def getUserStatistics():
     }
     fetchRating = Ratings.query.filter_by(user_id=user_id).all()
     fetchIssueCount = Issues.query.filter_by(user_id=user_id).all()
+    fetchRequestCount = Requests.query.filter_by(user_id=user_id).all()
     ratings = Ratings.query.filter_by(user_id=user_id).all()
     try:
         fetchIssueDict = {i[0]: i[1] for i in fetchIssues}
@@ -1067,7 +1071,7 @@ def getUserStatistics():
         days_last_loged = (datetime.now() - fetchUser.last_loged).days
         cardData = {
             "total_issued": len(fetchIssueCount),
-            "total_requests": len(fetchRequests),
+            "total_requests": len(fetchRequestCount),
             "most_active_month": active_month,
             "total_ratings": len(ratings),
             "days_last_loged": days_last_loged
@@ -1105,7 +1109,7 @@ def getUserStatistics():
             "Literati": 5000,
             "Scholar": 13750,
         }
-        return {"barchart": barData[::-1], "piechart": pieData, "user_info": user_data, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssueCount), "numRequests": len(fetchRequests), "avg_rating": avg_rate}, 200
+        return {"barchart": barData[::-1], "piechart": pieData, "user_info": user_data, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria[rank], "next_points": next_points[rank], "numIssues": len(fetchIssueCount), "numRequests": len(fetchRequestCount), "avg_rating": avg_rate}, 200
     except:
         barData = []
         for i in range(9):
@@ -1115,7 +1119,7 @@ def getUserStatistics():
         pieData = [["No Genre", 1]]
         cardData = {
             "total_issued": len(fetchIssueCount),
-            "total_requests": len(fetchRequests),
+            "total_requests": len(fetchRequestCount),
             "most_active_month": "-",
             "total_ratings": len(ratings),
             "days_last_loged": (datetime.now() - fetchUser.last_loged).days
@@ -1125,7 +1129,7 @@ def getUserStatistics():
         next_criteria = ["Read 5 Books"]
         next_pointer = 500
         numIssues = len(fetchIssueCount)
-        numRequests = len(fetchRequests)
+        numRequests = len(fetchRequestCount)
         avg_rate = 0.0
         return {"barchart": barData[::-1], "piechart": pieData, "user_info": user_data, "cardData": cardData, "score": score, "rank": rank, "next_criteria": next_criteria, "next_points": next_pointer, "numIssues": numIssues, "numRequests": numRequests, "avg_rating": avg_rate}, 200
 
@@ -1213,7 +1217,6 @@ def getLibrarianSections():
         "img": sectioner.img,
         "date_added": sectioner.date_added,
     }
-    print(sect)
     return sect, 200
 
 
@@ -1741,9 +1744,9 @@ def putBooks():
                 "img": fetcher.img,
                 "author_id": fetcher.author_id,
                 "author_name": fetcher.author_name,
-                "request_date": fetcher.request_date.strftime("%d %b %Y"),
-                "doi": fetcher.doi.strftime("%d %b %Y"),
-                "dor": fetcher.dor.strftime("%d %b %Y"),
+                "section_id": fetcher.section_id,
+                "genre": fetcher.genre,
+                "date_added": fetcher.date_added,
             }
             return finalResponse, 200
         else:

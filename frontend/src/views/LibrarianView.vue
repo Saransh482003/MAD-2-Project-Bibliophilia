@@ -1167,7 +1167,7 @@
         </div>
         <div
           class="actionBtns userActionBtns revokeBan"
-          title="Permanent Ban"
+          title="Revoke Permanent Ban"
           @click="revokeBan(previewUser.user_id)"
           v-else
         >
@@ -1460,76 +1460,83 @@ export default {
         });
     },
     async banUser(user_id) {
+      if (this.banData.ban_type == "Temp") {
+        await this.revokeInterdict(user_id);
+      }
       try {
-        const response = await axios.post(
-          "/push-content/blacklists",
-          {
-            user_id: user_id,
-            ban_type: "Perma",
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .post(
+            "/push-content/blacklists",
+            {
+              user_id: user_id,
+              ban_type: "Perma",
             },
-          }
-        );
-        console.log("Success:", response.data);
-        this.changePreviewUser(user_id);
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.changePreviewUser(user_id);
+          });
       } catch (error) {
         alert("Unable to Ban the User.");
       }
     },
     async revokeBan(user_id) {
       try {
-        const response = await axios.delete(
-          `/delete-content/blacklists?user_id=${user_id}`,
-          {
+        await axios
+          .delete(`/delete-content/blacklists?user_id=${user_id}`, {
             headers: {
               "x-librarian-request": true,
             },
-          }
-        );
-        this.changePreviewUser(user_id);
-        console.log("Success:", response.data);
+          })
+          .then(() => {
+            this.changePreviewUser(user_id);
+          });
       } catch (error) {
-        alert("Unable to Revoke Ban the User.");
+        alert("Unable to Revoke the Ban on the User.");
       }
     },
     async interdictUser(user_id) {
+      if (this.banData.ban_type == "Perma") {
+        await this.revokeBan(user_id);
+      }
       try {
-        const response = await axios.post(
-          "/push-content/blacklists",
-          {
-            user_id: user_id,
-            ban_type: "Temp",
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .post(
+            "/push-content/blacklists",
+            {
+              user_id: user_id,
+              ban_type: "Temp",
             },
-          }
-        );
-        this.changePreviewUser(user_id);
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.changePreviewUser(user_id);
+          });
       } catch (error) {
         alert("Unable to Intedict the User.");
       }
     },
     async revokeInterdict(user_id) {
       try {
-        const response = await axios.delete(
-          `/delete-content/blacklists?user_id=${user_id}`,
-          {
+        await axios
+          .delete(`/delete-content/blacklists?user_id=${user_id}`, {
             headers: {
               "x-librarian-request": true,
             },
-          }
-        );
-        this.changePreviewUser(user_id);
-        console.log("Success:", response.data);
+          })
+          .then(() => {
+            this.changePreviewUser(user_id);
+          });
       } catch (error) {
-        alert("Unable to Revoke Interdict the User.");
+        alert("Unable to Revoke the Interdict on the User.");
       }
     },
     rejectIssue(book_id, user_id) {
@@ -1539,9 +1546,8 @@ export default {
             "x-librarian-request": true,
           },
         })
-        .then((response) => {
+        .then(() => {
           this.fetchRequests();
-          console.log(response.data);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -1559,20 +1565,22 @@ export default {
         );
         if (responser.data.count + 1 <= 5) {
           try {
-            const response = await axios.post(
-              "/push-content/issues",
-              {
-                book_id: book_id,
-                user_id: user_id,
-              },
-              {
-                headers: {
-                  "x-librarian-request": true,
+            await axios
+              .post(
+                "/push-content/issues",
+                {
+                  book_id: book_id,
+                  user_id: user_id,
                 },
-              }
-            );
-            this.rejectIssue(book_id, user_id);
-            console.log("Success:", response.data);
+                {
+                  headers: {
+                    "x-librarian-request": true,
+                  },
+                }
+              )
+              .then(() => {
+                this.rejectIssue(book_id, user_id);
+              });
           } catch (error) {
             alert("Unable to Accept the Issue Request.");
           }
@@ -1588,20 +1596,22 @@ export default {
 
     async revokeIssue(book_id, user_id) {
       try {
-        const response = await axios.put(
-          "/put-content/librarian/issues",
-          {
-            book_id: book_id,
-            user_id: user_id,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/librarian/issues",
+            {
+              book_id: book_id,
+              user_id: user_id,
             },
-          }
-        );
-        console.log("Success:", response.data);
-        this.fetchIssues();
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.fetchIssues();
+          });
       } catch (error) {
         alert(
           "Unable to submit the feedback. Kindly try again or contact the librarian."
@@ -1721,23 +1731,25 @@ export default {
         this.selectedGenre != ""
       ) {
         try {
-          const response = await axios.post(
-            "/push-content/newBook",
-            {
-              book_name: this.createBookName,
-              img: this.createBookImg,
-              author_name: this.createBookAuthor,
-              section_id: this.selectedSection,
-              genre: this.selectedGenre,
-            },
-            {
-              headers: {
-                "x-librarian-request": true,
+          await axios
+            .post(
+              "/push-content/newBook",
+              {
+                book_name: this.createBookName,
+                img: this.createBookImg,
+                author_name: this.createBookAuthor,
+                section_id: this.selectedSection,
+                genre: this.selectedGenre,
               },
-            }
-          );
-          console.log("Success:", response.data);
-          this.fetchBooks();
+              {
+                headers: {
+                  "x-librarian-request": true,
+                },
+              }
+            )
+            .then(() => {
+              this.fetchBooks();
+            });
         } catch (error) {
           if (
             error.response &&
@@ -1756,20 +1768,22 @@ export default {
     async submitNewSection() {
       if (this.createSectionImg != "" && this.createSectionName != "") {
         try {
-          const response = await axios.post(
-            "/push-content/sections",
-            {
-              section_name: this.createSectionName,
-              img: this.createSectionImg,
-            },
-            {
-              headers: {
-                "x-librarian-request": true,
+          await axios
+            .post(
+              "/push-content/sections",
+              {
+                section_name: this.createSectionName,
+                img: this.createSectionImg,
               },
-            }
-          );
-          console.log("Success:", response.data);
-          this.fetchSections();
+              {
+                headers: {
+                  "x-librarian-request": true,
+                },
+              }
+            )
+            .then(() => {
+              this.fetchSections();
+            });
         } catch (error) {
           console.log(error);
           if (
@@ -1796,24 +1810,26 @@ export default {
         this.createAuthorRating != ""
       ) {
         try {
-          const response = await axios.post(
-            "/push-content/authors",
-            {
-              author_name: this.createAuthorName,
-              img: this.createAuthorImg,
-              dob: this.createAuthorDOB,
-              dod: this.createAuthorDOD,
-              country: this.createAuthorCountry,
-              avg_rating: this.createAuthorRating,
-            },
-            {
-              headers: {
-                "x-librarian-request": true,
+          await axios
+            .post(
+              "/push-content/authors",
+              {
+                author_name: this.createAuthorName,
+                img: this.createAuthorImg,
+                dob: this.createAuthorDOB,
+                dod: this.createAuthorDOD,
+                country: this.createAuthorCountry,
+                avg_rating: this.createAuthorRating,
               },
-            }
-          );
-          console.log("Success:", response.data);
-          this.fetchAuthors();
+              {
+                headers: {
+                  "x-librarian-request": true,
+                },
+              }
+            )
+            .then(() => {
+              this.fetchAuthors();
+            });
         } catch (error) {
           console.log(error);
           if (
@@ -1843,21 +1859,23 @@ export default {
     async saveTitle(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
-          "/put-content/books",
-          {
-            book_id: this.previewBook.book.book_id,
-            book_name: this.titleNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/books",
+            {
+              book_id: this.previewBook.book.book_id,
+              book_name: this.titleNew,
             },
-          }
-        );
-        this.previewBook.book.book_name = this.titleNew;
-        this.isTitleEdit = false;
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewBook.book.book_name = this.titleNew;
+            this.isTitleEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Title. Kindly try again.");
       }
@@ -1875,21 +1893,23 @@ export default {
     async saveGenre(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
-          "/put-content/books",
-          {
-            book_id: this.previewBook.book.book_id,
-            genre: this.genreNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/books",
+            {
+              book_id: this.previewBook.book.book_id,
+              genre: this.genreNew,
             },
-          }
-        );
-        this.previewBook.book.genre = this.genreNew;
-        this.isGenreEdit = false;
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewBook.book.genre = this.genreNew;
+            this.isGenreEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Genre. Kindly try again.");
       }
@@ -1907,7 +1927,7 @@ export default {
     async saveAuthor(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
+        await axios.put(
           "/put-content/books",
           {
             book_id: this.previewBook.book.book_id,
@@ -1919,21 +1939,23 @@ export default {
             },
           }
         );
-        const responseAuthor = await axios.put(
-          "/put-content/authors",
-          {
-            author_id: this.previewBook.book.author_id,
-            author_name: this.authorNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/authors",
+            {
+              author_id: this.previewBook.book.author_id,
+              author_name: this.authorNew,
             },
-          }
-        );
-        this.previewBook.book.author_name = this.authorNew;
-        this.isAuthorEdit = false;
-        console.log("Success:", response.data, responseAuthor.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewBook.book.author_name = this.authorNew;
+            this.isAuthorEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Author Name. Kindly try again.");
       }
@@ -1951,21 +1973,23 @@ export default {
     async saveSectionTitle(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
-          "/put-content/sections",
-          {
-            section_id: this.previewSection.section_id,
-            section_name: this.sectionTitleNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/sections",
+            {
+              section_id: this.previewSection.section_id,
+              section_name: this.sectionTitleNew,
             },
-          }
-        );
-        this.previewSection.section_name = this.sectionTitleNew;
-        this.isSectionTitleEdit = false;
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewSection.section_name = this.sectionTitleNew;
+            this.isSectionTitleEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Section Name. Kindly try again.");
       }
@@ -1983,21 +2007,23 @@ export default {
     async saveAuthorName(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
-          "/put-content/authors",
-          {
-            author_id: this.previewAuthor.author_id,
-            author_name: this.authorNameNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/authors",
+            {
+              author_id: this.previewAuthor.author_id,
+              author_name: this.authorNameNew,
             },
-          }
-        );
-        this.previewAuthor.author_name = this.authorNameNew;
-        this.isAuthorNameEdit = false;
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewAuthor.author_name = this.authorNameNew;
+            this.isAuthorNameEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Author Name. Kindly try again.");
       }
@@ -2015,21 +2041,23 @@ export default {
     async saveAuthorDOB(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
-          "/put-content/authors",
-          {
-            author_id: this.previewAuthor.author_id,
-            dob: this.authorDOBNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/authors",
+            {
+              author_id: this.previewAuthor.author_id,
+              dob: this.authorDOBNew,
             },
-          }
-        );
-        this.previewAuthor.dob = this.authorDOBNew;
-        this.isAuthorDOBEdit = false;
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewAuthor.dob = this.authorDOBNew;
+            this.isAuthorDOBEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Author DOB. Kindly try again.");
       }
@@ -2047,21 +2075,23 @@ export default {
     async saveAuthorDOD(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
-          "/put-content/authors",
-          {
-            author_id: this.previewAuthor.author_id,
-            dod: this.authorDODNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/authors",
+            {
+              author_id: this.previewAuthor.author_id,
+              dod: this.authorDODNew,
             },
-          }
-        );
-        this.previewAuthor.dod = this.authorDODNew;
-        this.isAuthorDODEdit = false;
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewAuthor.dod = this.authorDODNew;
+            this.isAuthorDODEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Author DOD. Kindly try again.");
       }
@@ -2079,21 +2109,23 @@ export default {
     async saveAuthorCountry(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
-          "/put-content/authors",
-          {
-            author_id: this.previewAuthor.author_id,
-            country: this.authorCountryNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/authors",
+            {
+              author_id: this.previewAuthor.author_id,
+              country: this.authorCountryNew,
             },
-          }
-        );
-        this.previewAuthor.country = this.authorCountryNew;
-        this.isAuthorCountryEdit = false;
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewAuthor.country = this.authorCountryNew;
+            this.isAuthorCountryEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Author Country. Kindly try again.");
       }
@@ -2111,36 +2143,34 @@ export default {
     async saveAuthorRating(event) {
       event.stopPropagation();
       try {
-        const response = await axios.put(
-          "/put-content/authors",
-          {
-            author_id: this.previewAuthor.author_id,
-            avg_rating: this.authorRatingNew,
-          },
-          {
-            headers: {
-              "x-librarian-request": true,
+        await axios
+          .put(
+            "/put-content/authors",
+            {
+              author_id: this.previewAuthor.author_id,
+              avg_rating: this.authorRatingNew,
             },
-          }
-        );
-        this.previewAuthor.avg_rating = this.authorRatingNew;
-        this.isAuthorRatingEdit = false;
-        console.log("Success:", response.data);
+            {
+              headers: {
+                "x-librarian-request": true,
+              },
+            }
+          )
+          .then(() => {
+            this.previewAuthor.avg_rating = this.authorRatingNew;
+            this.isAuthorRatingEdit = false;
+          });
       } catch (error) {
         alert("Unable to edit the Author Avg Rating. Kindly try again.");
       }
     },
     async deleteBook(book_id) {
       try {
-        const response = await axios.delete(
-          `/delete-content/books?book_id=${book_id}`,
-          {
-            headers: {
-              "x-librarian-request": true,
-            },
-          }
-        );
-        console.log("Success:", response.data);
+        await axios.delete(`/delete-content/books?book_id=${book_id}`, {
+          headers: {
+            "x-librarian-request": true,
+          },
+        });
         this.fetchBooks();
       } catch (error) {
         alert("Unable to Delete the book. Kindly try again.");
@@ -2148,32 +2178,30 @@ export default {
     },
     async deleteSection(section_id) {
       try {
-        const response = await axios.delete(
-          `/delete-content/sections?section_id=${section_id}`,
-          {
+        await axios
+          .delete(`/delete-content/sections?section_id=${section_id}`, {
             headers: {
               "x-librarian-request": true,
             },
-          }
-        );
-        console.log("Success:", response.data);
-        this.fetchSections();
+          })
+          .then(() => {
+            this.fetchSections();
+          });
       } catch (error) {
         alert("Unable to Delete the section. Kindly try again.");
       }
     },
     async deleteAuthor(author_id) {
       try {
-        const response = await axios.delete(
-          `/delete-content/authors?author_id=${author_id}`,
-          {
+        await axios
+          .delete(`/delete-content/authors?author_id=${author_id}`, {
             headers: {
               "x-librarian-request": true,
             },
-          }
-        );
-        console.log("Success:", response.data);
-        this.fetchAuthors();
+          })
+          .then(() => {
+            this.fetchAuthors();
+          });
       } catch (error) {
         alert("Unable to Delete the section. Kindly try again.");
       }
@@ -2261,13 +2289,14 @@ export default {
               },
             })
             .then((response) => {
-              this.banData["ban_type"] = response.data[0].ban_type;
-              this.banData["ban_date"] = response.data[0].ban_date;
-              this.banData["ban_end_date"] = response.data[0].ban_end_date;
+              this.banData.ban_type = response.data[0].ban_type;
+              this.banData.ban_date = response.data[0].ban_date;
+              this.banData.ban_end_date = response.data[0].ban_end_date;
             })
             .catch(() => {
-              this.banData["ban_type"] = "none";
+              this.banData.ban_type = "none";
             });
+          console.log(this.banData);
         })
         .catch(() => {
           this.$router.push("/error");
@@ -2300,7 +2329,7 @@ export default {
   flex-wrap: wrap;
   width: 100%;
   height: 40.1rem;
-  background: url("@/assets/images/biblio_bg.jpg");
+  background: url("https://github.com/Saransh482003/Image-hosting/blob/main/biblio_bg.jpg?raw=true");
   background-position: center center;
   background-size: cover;
   background-repeat: no-repeat;

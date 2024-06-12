@@ -81,7 +81,7 @@ export default {
   flex-direction: row;
   width: 100%;
   height: 40.1rem;
-  background: url("@/assets/images/biblio_bg.jpg");
+  background: url("https://github.com/Saransh482003/Image-hosting/blob/main/biblio_bg.jpg?raw=true");
   background-position: center center;
   background-size: cover;
   background-repeat: no-repeat;
