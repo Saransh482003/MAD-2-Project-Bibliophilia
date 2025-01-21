@@ -7,4 +7,11 @@ All right lets dive deep into the project and look at some of its features.
 Kindly watch this video demostration of the project: [Go to Video Demo](https://drive.google.com/file/d/1u6c1jiQ3QPmCvZ7iAZFHSoC-_7nwuaia/view?usp=sharing)
 
 ### Technologies Used
+Multiple technologies ranging from frontend to backend flanks were used to develop this project. 
 ![techs](https://github.com/user-attachments/assets/d17f0949-ce31-42a8-b846-1fb703af2b15)
+
+### Introduction 
+Bibliophilia is a multiple user Library Management System which creates a virtual platform for readers to explore books encompassing multiple authors and genres. 
+
+### Multi-Users
+There are two user types: Readers and Admins
