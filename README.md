@@ -87,7 +87,7 @@ The frontend is designed to offer a seamless and user-friendly experience. Key f
 
 ## Database Schema
 
-![image](https://github.com/user-attachments/assets/df4c3334-a49a-4ec3-8fe6-137786a6f53c)
+![image](https://github.com/user-attachments/assets/4c40ef13-6cf7-4acd-ab64-9154536f5aec)
 
 |Books|Authors|Users|Sections|
 |------|------|-----|------------|
