@@ -121,4 +121,6 @@ Developing this application was an enjoyable and rewarding experience. Transitio
   - **Celery Worker:** `celery -A app.celery_app worker --loglevel INFO -P gevent` (in the backend directory) *[Terminal 3]*
   - **Celery Beat:** `celery -A app.celery_app beat --loglevel INFO` (in the backend directory) *[Terminal 4]*
 
+    
+
 ***Saransh Saini | 22F1001123 | IIT Madras***
