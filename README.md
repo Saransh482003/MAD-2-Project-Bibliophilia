@@ -16,7 +16,7 @@ Multiple technologies ranging from frontend to backend flanks were used to devel
 - **Caching & Task Scheduling:** Redis, Celery
 
 ## System Architecture
-
+![image](https://github.com/user-attachments/assets/73aa3eff-c6ae-439a-8b1f-c1d84c569241)
 The application is divided into three main components:
 
 1. **Database Management:** Powered by SQLite, with models designed using Flask-SQLAlchemy.
@@ -61,7 +61,7 @@ Readers and the Librarian are the two types of users who differ in levels of fun
 - Manage issue requests
 
 ## Celery Batch Jobs
-
+![image](https://github.com/user-attachments/assets/3408465f-da33-4628-bd2c-7e7cba60f143)
 Three types of asynchronous batch jobs have been implemented:
 
 1. **Daily Task:** Triggered daily for routine operations.
@@ -70,7 +70,7 @@ Three types of asynchronous batch jobs have been implemented:
 
 
 ## Frontend
-
+![image](https://github.com/user-attachments/assets/67d553ac-526e-49de-a5a9-dd90ffb8f297)
 The frontend is designed to offer a seamless and user-friendly experience. Key features include:
 
 - **View Navigation Bar:** Allows users to navigate between different pages.
@@ -78,6 +78,8 @@ The frontend is designed to offer a seamless and user-friendly experience. Key f
 - **Preview Panel:** Enables users to view comprehensive details of the selected book and offers options to either request the book for issue or save it for later.
 
 ## Database Schema
+![image](https://github.com/user-attachments/assets/df4c3334-a49a-4ec3-8fe6-137786a6f53c)
+
 |Books|Authors|Users|Sections|
 |------|------|-----|------------|
 |book_id|author_id|section_id|section_name|
@@ -88,3 +90,25 @@ The frontend is designed to offer a seamless and user-friendly experience. Key f
 |section_id|country|||
 |genre|org_rating|||
 |date_added|||
+
+## Additional Features
+
+A league/ranking system has been implemented for users, determined by their activity level using the formula:
+![image](https://github.com/user-attachments/assets/4652d10d-0b9c-416d-bfc9-4871a1573980)
+
+```python
+100 × Number of Books Issued + 250 × Number of Books Rated
+```
+
+Users are categorized into four leagues in ascending order of rank:
+
+1. Reader
+2. Literati
+3. Scholar
+4. Sage
+
+Advancement to higher leagues requires meeting specific criteria. All relevant information is displayed on the user's dashboard.
+
+## Conclusion
+
+Developing this application was an enjoyable and rewarding experience. Transitioning from ReactJS to VueJS was relatively straightforward, while working with Redis and Celery provided valuable hands-on experience.
