@@ -78,3 +78,13 @@ The frontend is designed to offer a seamless and user-friendly experience. Key f
 - **Preview Panel:** Enables users to view comprehensive details of the selected book and offers options to either request the book for issue or save it for later.
 
 ## Database Schema
+|Books|Authors|Users|Sections|
+-----------------------------
+|book_id|author_id|section_id|section_name|
+|book_name|author_name|section_id|img|
+|img|img|img|date_added|
+|author_id|dob|date_added||
+|author_name|dod|||
+|section_id|country|||
+|genre|org_rating|||
+|date_added|||
