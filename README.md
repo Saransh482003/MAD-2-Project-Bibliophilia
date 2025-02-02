@@ -68,3 +68,13 @@ Three types of asynchronous batch jobs have been implemented:
 2. **Monthly Task:** Triggered monthly for periodic operations.
 3. **User-Triggered Task:** Triggered by user actions.
 
+
+## Frontend
+
+The frontend is designed to offer a seamless and user-friendly experience. Key features include:
+
+- **View Navigation Bar:** Allows users to navigate between different pages.
+- **Side Navigation Bar:** Facilitates smooth transitions between various tabs on the same page.
+- **Preview Panel:** Enables users to view comprehensive details of the selected book and offers options to either request the book for issue or save it for later.
+
+## Database Schema
