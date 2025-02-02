@@ -89,17 +89,6 @@ The frontend is designed to offer a seamless and user-friendly experience. Key f
 
 ![image](https://github.com/user-attachments/assets/4c40ef13-6cf7-4acd-ab64-9154536f5aec)
 
-|Books|Authors|Users|Sections|
-|------|------|-----|------------|
-|book_id|author_id|section_id|section_name|
-|book_name|author_name|section_id|img|
-|img|img|img|date_added|
-|author_id|dob|date_added||
-|author_name|dod|||
-|section_id|country|||
-|genre|org_rating|||
-|date_added|||
-
 ## Additional Features
 
 A league/ranking system has been implemented for users, determined by their activity level using the formula:
@@ -130,4 +119,4 @@ Developing this application was an enjoyable and rewarding experience. Transitio
   - **Backend:** `python app.py` (in the backend directory) *[Terminal 1]*
   - **Frontend:** `yarn run serve` (in the frontend directory) *[Terminal 2]*
   - **Celery Worker:** `celery -A app.celery_app worker --loglevel INFO -P gevent` (in the backend directory) *[Terminal 3]*
-  - **Backend:** `celery -A app.celery_app beat --loglevel INFO` (in the backend directory) *[Terminal 4]*
+  - **Celery Beat:** `celery -A app.celery_app beat --loglevel INFO` (in the backend directory) *[Terminal 4]*
