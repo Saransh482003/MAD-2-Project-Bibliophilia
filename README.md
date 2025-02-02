@@ -122,3 +122,12 @@ Advancement to higher leagues requires meeting specific criteria. All relevant i
 ## Conclusion
 
 Developing this application was an enjoyable and rewarding experience. Transitioning from ReactJS to VueJS was relatively straightforward, while working with Redis and Celery provided valuable hands-on experience.
+
+### Extra Information
+
+- **Librarian Sign-In Process:** Involves two steps. Initially, a specific username and password are required to access the Librarian Sign-In Page.
+- **How to Start the App:**
+  - **Backend:** `python app.py` (in the backend directory) *[Terminal 1]*
+  - **Frontend:** `yarn run serve` (in the frontend directory) *[Terminal 2]*
+  - **Celery Worker:** `celery -A app.celery_app worker --loglevel INFO -P gevent` (in the backend directory) *[Terminal 3]*
+  - **Backend:** `celery -A app.celery_app beat --loglevel INFO` (in the backend directory) *[Terminal 4]*
