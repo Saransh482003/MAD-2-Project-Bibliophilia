@@ -79,7 +79,7 @@ The frontend is designed to offer a seamless and user-friendly experience. Key f
 
 ## Database Schema
 |Books|Authors|Users|Sections|
------------------------------
+|------|------|-----|------------|
 |book_id|author_id|section_id|section_name|
 |book_name|author_name|section_id|img|
 |img|img|img|date_added|
