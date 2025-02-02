@@ -104,7 +104,7 @@ The frontend is designed to offer a seamless and user-friendly experience. Key f
 
 A league/ranking system has been implemented for users, determined by their activity level using the formula:
 
-![image](https://github.com/user-attachments/assets/4652d10d-0b9c-416d-bfc9-4871a1573980)
+![image](https://github.com/user-attachments/assets/5be1b9fe-59ab-4cd2-9f87-5fcaa4ae02e6)
 
 ```python
 100 × Number of Books Issued + 250 × Number of Books Rated
