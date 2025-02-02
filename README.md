@@ -1,6 +1,6 @@
 # Bibliophilia : Library Management Application
 ![Biblo1](https://github.com/user-attachments/assets/f0938fb8-4643-4fa1-9f32-134c5ae48d81)
-This project was created to fulfill the requirements for the MAD-2 Project of the **BS in Data Science and Application** degree program from **Indian Institute of Technology, Madras (IIT Madras)**.
+This project was created to fulfill the requirements for the **MAD-2 Project** of the **BS in Data Science and Application** degree program from **Indian Institute of Technology, Madras (IIT Madras)**.
 
 Bibliophilia is a role-based library management application designed to provide book enthusiasts with a seamless and enjoyable experience. The application features a Vue.js frontend and a robust Flask backend, managed by a single librarian who oversees all operations, including accepting requests, adding new books, and managing user accounts.
 
