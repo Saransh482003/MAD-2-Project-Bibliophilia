@@ -6,6 +6,8 @@ Bibliophilia is a role-based library management application designed to provide 
 
 Kindly watch this video demostration of the project: [Go to Video Demo](https://drive.google.com/file/d/1u6c1jiQ3QPmCvZ7iAZFHSoC-_7nwuaia/view?usp=sharing)
 
+LinkedIn Post: [Go to LinkedIn Post]([https://drive.google.com/file/d/1u6c1jiQ3QPmCvZ7iAZFHSoC-_7nwuaia/view?usp=sharing](https://www.linkedin.com/posts/saranshsaini48_linkedin-vuejs-flask-activity-7252158841109295104-Gj8p?utm_source=share&utm_medium=member_desktop))
+
 ## Technologies Used
 
 Multiple technologies ranging from frontend to backend flanks were used to develop this project. 
@@ -47,9 +49,7 @@ class Books(db.Model):
 
 The database's CRUD operations are exclusively executed through APIs, leveraging Flask-Restful to implement essential functionalities such as GET, POST, PUT, and DELETE operations at specific endpoints. This ensures a robust and standardized mechanism for interacting with the database.
 
-## User and Librarian Functionalities
-
-Readers and the Librarian are the two types of users who differ in levels of functionalities and authority.
+## Multi-User Functionalities and Features
 
 ### Reader Features:
 - View all books
