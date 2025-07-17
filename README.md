@@ -116,11 +116,22 @@ Developing this application was an enjoyable and rewarding experience. Transitio
 
 - **Librarian Sign-In Process:** Involves two steps. Initially, a specific username and password are required to access the Librarian Sign-In Page.
 - **How to Start the App:**
-  - **Backend:** `python app.py` (in the backend directory) *[Terminal 1]*
-  - **Frontend:** `yarn run serve` (in the frontend directory) *[Terminal 2]*
-  - **Celery Worker:** `celery -A app.celery_app worker --loglevel INFO -P gevent` (in the backend directory) *[Terminal 3]*
-  - **Celery Beat:** `celery -A app.celery_app beat --loglevel INFO` (in the backend directory) *[Terminal 4]*
+  - **Backend:** 
+    - `cd backend` (go to the backend directory firstly)  *[Terminal 1]*
+    - `pip install -r requirements.txt` (install all dependencies)
+    - `python app.py` (fire the backend)
+  - **Frontend:** 
+    - `cd frontend` (go to the frontend directory firstly)  *[Terminal 2]*
+    - `yarn install` (install all dependencies)
+    - `yarn run serve` (fire the frontend)
+  - **Redis:** 
+    - `redis-server` (start redis)  *[Terminal 3]*
+  - **Celery Worker:** 
+    - `cd backend` (go to the backend directory firstly)  *[Terminal 4]*
+    - `celery -A app.celery_app worker --loglevel INFO -P gevent` (fire celery tasks)
+  - **Celery Beat:** 
+    - `cd backend` (go to the backend directory firstly)  *[Terminal 5]*
+    - `celery -A app.celery_app beat --loglevel INFO` (fire beat scheduler)
 
     
-
 ***Saransh Saini | 22F1001123 | IIT Madras***
