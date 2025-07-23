@@ -116,7 +116,7 @@ def send_email_reminder(self):
         ).group_by(Users.user_id).order_by(desc(Issues.dor)).limit(10).all()
 
         email_sender = 'saini.saransh03@gmail.com'
-        email_password = 'qctmtkdcbkchxbkj'
+        email_password = '<Password>'
 
         subject = 'Bibliophilia - Daily Reminder'
         for i in last_logers:
